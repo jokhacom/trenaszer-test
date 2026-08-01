@@ -507,7 +507,7 @@ export default function App() {
         {screen === "grading" && (
           <div style={{ ...glass, padding: 40, textAlign: "center" }} className="pop-in">
             <div style={{ fontSize: 44, marginBottom: 12 }}>🤖</div>
-            <div className="display-font" style={{ fontWeight: 700, fontSize: 18 }}>ИИ проверяет ваши ответы...</div>
+            <div className="display-font" style={{ fontWeight: 700, fontSize: 18 }}>Мы проверяем ваши ответы...</div>
             <div style={{ color: textMuted, marginTop: 8 }}>Анализируем смысл, орфографию и грамматику</div>
           </div>
         )}
