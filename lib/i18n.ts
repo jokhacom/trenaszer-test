@@ -92,6 +92,11 @@ const S = {
   levelQuestion: { uz: "Savol", ru: "Наводящий вопрос", en: "A leading question" },
   levelExample: { uz: "O‘xshash misol", ru: "Похожий пример", en: "A similar example" },
   levelTogether: { uz: "Birga yechamiz", ru: "Решаем вместе", en: "Let's solve it together" },
+  exampleIntro: {
+    uz: "Mana o‘xshash masala. Qanday yechilishini qara:",
+    ru: "Вот похожая задача. Посмотри, как она решается:",
+    en: "Here is a similar problem. Watch how it is solved:",
+  },
   exampleNow: {
     uz: "Endi xuddi shunday o‘z masalangni yech!",
     ru: "Теперь реши так же свою задачу!",

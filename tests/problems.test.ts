@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { evaluate, parseSimpleExample } from "../lib/expression";
 import { classifyInput } from "../lib/ladder";
 import { containsNumber, lessonFromExample, makeLesson, TOPICS_BY_GRADE } from "../lib/problems";
-import { LANGS, type Grade, type Lesson } from "../lib/types";
+import { LANGS, type Grade, type Lesson, type Visual } from "../lib/types";
 
 function seeded(seed: number) {
   let s = seed;
@@ -12,8 +12,23 @@ function seeded(seed: number) {
   };
 }
 
+function visualNumbers(v: Visual | undefined): string[] {
+  if (!v) return [];
+  if (v.kind === "blocks") return v.rows.map((r) => r.label ?? "");
+  if (v.kind === "column") return [v.result ?? ""];
+  return [];
+}
+
 function checkNoLeak(l: Lesson) {
-  const texts = [l.hint, l.question.prompt, ...(l.question.options ?? []).map((o) => o.label), ...l.example];
+  const texts = [
+    l.hint,
+    l.question.prompt,
+    ...(l.question.options ?? []).map((o) => o.label),
+    ...l.example,
+    ...(l.exampleFrames ?? []).flatMap((f) => [f.text, ...visualNumbers(f.visual)]),
+    ...visualNumbers(l.own),
+    ...l.together.flatMap((st) => visualNumbers(st.visual)),
+  ];
   for (const text of texts) {
     expect(containsNumber(text, l.answer), `answer ${l.answer} leaks in "${text}" (task ${l.task})`).toBe(false);
   }
@@ -29,6 +44,9 @@ describe("built-in lessons", () => {
             const l = makeLesson(topic, lang, grade, r);
             checkNoLeak(l);
             expect(l.together.length).toBeGreaterThan(0);
+            // Every built-in task has a picture example and a picture of the child's own task.
+            expect(l.exampleFrames?.length ?? 0).toBeGreaterThanOrEqual(3);
+            expect(l.own).toBeDefined();
             expect(l.answer).toBeGreaterThan(0);
             expect(Number.isInteger(l.answer)).toBe(true);
             // The last "together" step always leads to the child's own answer.

@@ -36,6 +36,7 @@ export const PEOPLE: Person[] = [
 ];
 
 export interface Item {
+  emoji: string;
   uz: string;
   /** Uzbek accusative: «olmani». */
   uzAcc: string;
@@ -44,12 +45,12 @@ export interface Item {
 }
 
 export const ITEMS: Item[] = [
-  { uz: "olma", uzAcc: "olmani", ru: ["яблоко", "яблока", "яблок"], en: ["apple", "apples"] },
-  { uz: "qalam", uzAcc: "qalamni", ru: ["карандаш", "карандаша", "карандашей"], en: ["pencil", "pencils"] },
-  { uz: "shar", uzAcc: "sharni", ru: ["шарик", "шарика", "шариков"], en: ["balloon", "balloons"] },
-  { uz: "kitob", uzAcc: "kitobni", ru: ["книга", "книги", "книг"], en: ["book", "books"] },
-  { uz: "yong‘oq", uzAcc: "yong‘oqni", ru: ["орех", "ореха", "орехов"], en: ["nut", "nuts"] },
-  { uz: "konfet", uzAcc: "konfetni", ru: ["конфета", "конфеты", "конфет"], en: ["candy", "candies"] },
+  { emoji: "🍎", uz: "olma", uzAcc: "olmani", ru: ["яблоко", "яблока", "яблок"], en: ["apple", "apples"] },
+  { emoji: "✏️", uz: "qalam", uzAcc: "qalamni", ru: ["карандаш", "карандаша", "карандашей"], en: ["pencil", "pencils"] },
+  { emoji: "🎈", uz: "shar", uzAcc: "sharni", ru: ["шарик", "шарика", "шариков"], en: ["balloon", "balloons"] },
+  { emoji: "📕", uz: "kitob", uzAcc: "kitobni", ru: ["книга", "книги", "книг"], en: ["book", "books"] },
+  { emoji: "🌰", uz: "yong‘oq", uzAcc: "yong‘oqni", ru: ["орех", "ореха", "орехов"], en: ["nut", "nuts"] },
+  { emoji: "🍬", uz: "konfet", uzAcc: "konfetni", ru: ["конфета", "конфеты", "конфет"], en: ["candy", "candies"] },
 ];
 
 /** «12 яблок» / «12 ta olma» / «12 apples». */

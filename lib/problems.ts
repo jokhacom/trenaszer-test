@@ -5,7 +5,7 @@
 // example is always a different task solved in full.
 
 import { parseSimpleExample } from "./expression";
-import type { BarSpec, Grade, Lang, Lesson, Step, Topic } from "./types";
+import type { BarSpec, Frame, Grade, Lang, Lesson, Step, Topic, Visual } from "./types";
 import { count, enPlural, ITEMS, PEOPLE, ruPlural, type Item, type Person, type Tr } from "./words";
 
 export type Rng = () => number;
@@ -69,6 +69,10 @@ interface Spec<P> {
   /** Full solution of a task with these params, shown as a similar example. */
   solved(p: P, l: Lang): string[];
   bar?(p: P, l: Lang): BarSpec;
+  /** The solved example as slides with pictures (concrete → pictorial → abstract). */
+  frames?(p: P, l: Lang): Frame[];
+  /** The child's own task as a picture, without the answer. */
+  own?(p: P, l: Lang): Visual;
   /** Extra constraints so ladder texts can never reveal the answer. */
   valid?(p: P): boolean;
 }
@@ -421,7 +425,7 @@ const mult: Spec<AB> = {
   hint: (p, l) =>
     t(l, {
       uz: `Ko‘paytirish — bir xil sonlarni qo‘shish. ${p.a} × ${p.b} — bu ${p.b} marta ${p.a}: ${p.a} + ${p.a} + …`,
-      ru: `Умножение — это сложение одинаковых чисел. ${p.a} × ${p.b} — это ${p.b} раз по ${p.a}: ${p.a} + ${p.a} + …`,
+      ru: `Умножение — это сложение одинаковых чисел. ${p.a} × ${p.b} — это ${p.b} ${ruPlural(p.b, ["раз", "раза", "раз"])} по ${p.a}: ${p.a} + ${p.a} + …`,
       en: `Multiplication is adding equal numbers. ${p.a} × ${p.b} means ${p.b} times ${p.a}: ${p.a} + ${p.a} + …`,
     }),
   question: (p, l) => ({
@@ -540,6 +544,200 @@ const mult2d: Spec<AB> = {
   },
 };
 
+
+// ---------- Pictures (Singapore: concrete → pictorial → abstract) ----------
+
+const digits = (n: number) => ({ tens: Math.floor(n / 10), ones: n % 10 });
+const ROD = { uz: "tayoqcha — o‘nlik, kubik — birlik", ru: "полоска — десяток, кубик — единица", en: "a rod is a ten, a cube is a one" };
+
+add10.own = (p) => ({ kind: "tenframe", a: p.a, b: p.b });
+add10.frames = (p, l) => {
+  const k = 10 - p.a;
+  const r = p.b - k;
+  const s = p.a + p.b;
+  return [
+    { text: t(l, { uz: `Rasmga qara: ${p.a} va ${p.b}`, ru: `Нарисуем: ${p.a} и ${p.b}`, en: `Let's draw it: ${p.a} and ${p.b}` }), visual: { kind: "tenframe", a: p.a, b: p.b } },
+    {
+      text: t(l, {
+        uz: `Birinchi ramkani to‘ldiramiz: ikkinchisidan ${k} tasini o‘tkazamiz.`,
+        ru: `Заполним первую рамку: перенесём ${k} из второй.`,
+        en: `Fill the first frame: move ${k} from the second one.`,
+      }),
+      visual: { kind: "tenframe", a: p.a, b: p.b, move: k },
+    },
+    {
+      text: t(l, {
+        uz: `Birinchi ramkada 10 ta, ikkinchisida ${r} ta: 10 + ${r} = ${s}`,
+        ru: `В первой рамке 10, во второй ${r}: 10 + ${r} = ${s}`,
+        en: `The first frame has 10, the second has ${r}: 10 + ${r} = ${s}`,
+      }),
+      visual: { kind: "tenframe", a: p.a, b: p.b, move: k },
+    },
+    { text: `${p.a} + ${p.b} = ${s}` },
+  ];
+};
+
+addCarry.own = (p) => ({ kind: "blocks", rows: [{ label: `${p.a}`, ...digits(p.a) }, { label: `${p.b}`, ...digits(p.b) }] });
+addCarry.frames = (p, l) => {
+  const x = digits(p.a), y = digits(p.b);
+  const us = x.ones + y.ones;
+  const ts = x.tens + y.tens + 1;
+  const s = p.a + p.b;
+  return [
+    { text: t(l, { uz: `Sonlarni chizamiz: ${ROD.uz}.`, ru: `Нарисуем числа: ${ROD.ru}.`, en: `Let's draw the numbers: ${ROD.en}.` }), visual: addCarry.own!(p, l) },
+    {
+      text: t(l, {
+        uz: `Kubiklarni qo‘shamiz: ${x.ones} + ${y.ones} = ${us}. 10 ta kubikdan 1 ta tayoqcha yasaymiz.`,
+        ru: `Сложим кубики: ${x.ones} + ${y.ones} = ${us}. Из 10 кубиков сделаем 1 полоску.`,
+        en: `Add the cubes: ${x.ones} + ${y.ones} = ${us}. Turn 10 cubes into 1 rod.`,
+      }),
+      visual: { kind: "blocks", rows: [{ label: `${us}`, tens: 0, ones: us, ringTen: true }] },
+    },
+    {
+      text: t(l, {
+        uz: `Tayoqchalar: ${x.tens} + ${y.tens} + 1 = ${ts}. Kubiklar: ${us - 10}. Hammasi: ${s}.`,
+        ru: `Полоски: ${x.tens} + ${y.tens} + 1 = ${ts}. Кубики: ${us - 10}. Всего: ${s}.`,
+        en: `Rods: ${x.tens} + ${y.tens} + 1 = ${ts}. Cubes: ${us - 10}. Altogether: ${s}.`,
+      }),
+      visual: { kind: "blocks", rows: [{ label: `${s}`, tens: ts, ones: us - 10 }] },
+    },
+    {
+      text: t(l, { uz: "Ustun shaklida bunday yoziladi:", ru: "Столбиком это записывают так:", en: "In a column it looks like this:" }),
+      visual: { kind: "column", a: p.a, b: p.b, op: "+", result: `${s}`, carry: "1" },
+    },
+  ];
+};
+
+subBorrow.own = (p) => ({ kind: "blocks", rows: [{ label: `${p.a}`, ...digits(p.a) }] });
+subBorrow.frames = (p, l) => {
+  const x = digits(p.a), y = digits(p.b);
+  const s = p.a - p.b;
+  const broken = { label: `${p.a}`, tens: x.tens - 1, ones: x.ones + 10, fromTen: 10 };
+  return [
+    { text: t(l, { uz: `${p.a} sonini chizamiz: ${ROD.uz}.`, ru: `Нарисуем число ${p.a}: ${ROD.ru}.`, en: `Let's draw ${p.a}: ${ROD.en}.` }), visual: subBorrow.own!(p, l) },
+    {
+      text: t(l, {
+        uz: `${y.ones} tasini olib tashlash kerak, kubiklar esa ${x.ones} ta. 1 ta tayoqchani 10 ta kubikka almashtiramiz.`,
+        ru: `Нужно убрать ${y.ones}, а кубиков только ${x.ones}. Разменяем 1 полоску на 10 кубиков.`,
+        en: `We need to take away ${y.ones}, but there are only ${x.ones} cubes. Swap 1 rod for 10 cubes.`,
+      }),
+      visual: { kind: "blocks", rows: [broken] },
+    },
+    {
+      text: t(l, {
+        uz: `Endi ${p.b} sonini ayiramiz: ${y.tens} — tayoqchalardan, ${y.ones} — kubiklardan. ${s} qoldi.`,
+        ru: `Теперь убираем ${p.b}: ${y.tens} — из полосок, ${y.ones} — из кубиков. Осталось ${s}.`,
+        en: `Now take away ${p.b}: ${y.tens} from the rods, ${y.ones} from the cubes. ${s} is left.`,
+      }),
+      visual: { kind: "blocks", rows: [{ ...broken, crossTens: y.tens, crossOnes: y.ones }] },
+    },
+    {
+      text: t(l, { uz: "Ustun shaklida bunday yoziladi:", ru: "Столбиком это записывают так:", en: "In a column it looks like this:" }),
+      visual: { kind: "column", a: p.a, b: p.b, op: "−", result: `${s}`, carry: `${x.tens - 1}` },
+    },
+  ];
+};
+
+// "Solve together" steps show the column filling up, but never the answer's digits before the child finds them.
+const addTogether = addCarry.together;
+addCarry.together = (p, l) => {
+  const u = (p.a % 10) + (p.b % 10) - 10;
+  return addTogether(p, l).map((st, i) => ({
+    ...st,
+    visual: { kind: "column", a: p.a, b: p.b, op: "+", result: i >= 2 ? `?${u}` : "??", carry: i >= 2 ? "1" : undefined },
+  }));
+};
+const subTogether = subBorrow.together;
+subBorrow.together = (p, l) => {
+  const u = 10 + (p.a % 10) - (p.b % 10);
+  const borrowed = `${Math.floor(p.a / 10) - 1}`;
+  return subTogether(p, l).map((st, i) => ({
+    ...st,
+    visual: { kind: "column", a: p.a, b: p.b, op: "−", result: i >= 2 ? `?${u}` : "??", carry: i >= 1 ? borrowed : undefined },
+  }));
+};
+
+const STAR = "⭐";
+const countBy = (x: number, n: number) => Array.from({ length: n }, (_, i) => (i + 1) * x).join(", ");
+
+mult.own = (p) => ({ kind: "groups", groups: p.b, each: p.a, emoji: STAR });
+mult.frames = (p, l) => [
+  {
+    text: t(l, {
+      uz: `${p.a} × ${p.b} — bu ${p.b} marta ${p.a}. Guruhlarni chizamiz.`,
+      ru: `${p.a} × ${p.b} — это ${p.b} ${ruPlural(p.b, ["раз", "раза", "раз"])} по ${p.a}. Нарисуем группы.`,
+      en: `${p.a} × ${p.b} means ${p.b} groups of ${p.a}. Let's draw them.`,
+    }),
+    visual: mult.own!(p, l),
+  },
+  { text: t(l, { uz: `${p.a} tadan sanaymiz: ${countBy(p.a, p.b)}`, ru: `Считаем по ${p.a}: ${countBy(p.a, p.b)}`, en: `Count by ${p.a}: ${countBy(p.a, p.b)}` }), visual: mult.own!(p, l) },
+  { text: `${p.a} × ${p.b} = ${p.a * p.b}` },
+];
+
+div.own = (p) => ({ kind: "objects", emoji: STAR, counts: [p.a * p.b] });
+div.frames = (p, l) => {
+  const n = p.a * p.b;
+  const sign = l === "en" ? "÷" : ":";
+  return [
+    {
+      text: t(l, { uz: `${n} ta ${STAR} bor. Har guruhga ${p.a} tadan joylaymiz.`, ru: `Есть ${n} ${STAR}. Разложим по ${p.a} в каждую группу.`, en: `There are ${n} ${STAR}. Put ${p.a} in each group.` }),
+      visual: { kind: "objects", emoji: STAR, counts: [n] },
+    },
+    {
+      text: t(l, { uz: `Guruhlarni sanaymiz: ${p.b} ta chiqdi.`, ru: `Считаем группы: получилось ${p.b}.`, en: `Count the groups: there are ${p.b}.` }),
+      visual: { kind: "groups", groups: p.b, each: p.a, emoji: STAR },
+    },
+    { text: `${n} ${sign} ${p.a} = ${p.b}` },
+  ];
+};
+
+mult2d.own = (p) => ({ kind: "blocks", rows: [{ label: `${p.a}`, ...digits(p.a) }] });
+mult2d.frames = (p, l) => {
+  const d = digits(p.a);
+  const T = d.tens * 10;
+  return [
+    { text: t(l, { uz: `${p.a} sonini ajratamiz: ${T} + ${d.ones}.`, ru: `Разложим ${p.a}: ${T} + ${d.ones}.`, en: `Split ${p.a}: ${T} + ${d.ones}.` }), visual: mult2d.own!(p, l) },
+    {
+      text: t(l, { uz: `${p.b} marta olamiz.`, ru: `Возьмём ${p.b} ${ruPlural(p.b, ["раз", "раза", "раз"])}.`, en: `Take it ${p.b} times.` }),
+      visual: { kind: "blocks", rows: Array.from({ length: p.b }, () => ({ ...d })) },
+    },
+    { text: `${T} × ${p.b} = ${T * p.b},   ${d.ones} × ${p.b} = ${d.ones * p.b}` },
+    { text: `${T * p.b} + ${d.ones * p.b} = ${p.a * p.b}` },
+  ];
+};
+
+function wordPicture(p: Word, kind: BarSpec["kind"], l: Lang): Visual {
+  if (kind === "total" && p.a + p.b <= 20) return { kind: "objects", emoji: p.item.emoji, counts: [p.a, p.b] };
+  if (kind === "remain" && p.a <= 20) return { kind: "objects", emoji: p.item.emoji, counts: [p.a] };
+  return { kind: "bar", spec: { kind, a: p.a, b: p.b, nameA: nm(l, p.A), nameB: nm(l, p.B) } };
+}
+
+function wordFrames(spec: Spec<Word>, kind: BarSpec["kind"], sign: "+" | "−", why: Tr) {
+  return (p: Word, l: Lang): Frame[] => {
+    const res = spec.answer(p);
+    const first = wordPicture(p, kind, l);
+    const frames: Frame[] = [{ text: `${similarTask(l)}: ${spec.task(p, l)}`, visual: first }];
+    if (kind === "remain" && first.kind === "objects") {
+      frames.push({
+        text: t(l, { uz: `${p.b} tasini olib tashlaymiz.`, ru: `Зачеркнём ${p.b} — их отдали.`, en: `Cross out ${p.b} — they were given away.` }),
+        visual: { ...first, crossed: p.b },
+      });
+    }
+    frames.push({ text: t(l, why), visual: { kind: "bar", spec: { kind, a: p.a, b: p.b, nameA: nm(l, p.A), nameB: nm(l, p.B) } } });
+    frames.push({ text: `${p.a} ${sign} ${p.b} = ${res}. ${answerWord(l)}: ${count(l, res, p.item)}.` });
+    return frames;
+  };
+}
+
+wordTotal.own = (p, l) => wordPicture(p, "total", l);
+wordTotal.frames = wordFrames(wordTotal, "total", "+", { uz: "Hammasini topamiz — qo‘shamiz.", ru: "Ищем всё вместе — складываем.", en: "We look for the total — so we add." });
+wordRemain.own = (p, l) => wordPicture(p, "remain", l);
+wordRemain.frames = wordFrames(wordRemain, "remain", "−", { uz: "Qolganini topamiz — ayiramiz.", ru: "Ищем, сколько осталось, — вычитаем.", en: "We look for what is left — so we subtract." });
+wordMore.own = (p, l) => wordPicture(p, "more", l);
+wordMore.frames = wordFrames(wordMore, "more", "+", { uz: "«Ko‘p» — shunchasi va yana — qo‘shamiz.", ru: "«На … больше» — столько же и ещё — складываем.", en: '"More" means the same and some extra — so we add.' });
+wordLess.own = (p, l) => wordPicture(p, "less", l);
+wordLess.frames = wordFrames(wordLess, "less", "−", { uz: "«Kam» — shunchasidan olib tashlaymiz — ayiramiz.", ru: "«На … меньше» — столько же, но без части — вычитаем.", en: '"Fewer" means the same minus some — so we subtract.' });
+
 // ---------- Registry ----------
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -583,7 +781,7 @@ function build<P>(spec: Spec<P>, p: P, lang: Lang, r: Rng, grade: Grade): Lesson
   // A similar example: same kind of task, different numbers, answer not shown anywhere.
   let ex = spec.gen(r, grade);
   for (let i = 0; i < 50; i++) {
-    const exLines = spec.solved(ex, lang);
+    const exLines = [...spec.solved(ex, lang), ...(spec.frames?.(ex, lang) ?? []).map((f) => f.text)];
     const ok = (!spec.valid || spec.valid(ex)) && spec.answer(ex) !== answer && !exLines.some((s) => containsNumber(s, answer));
     if (ok) break;
     ex = spec.gen(r, grade);
@@ -597,6 +795,8 @@ function build<P>(spec: Spec<P>, p: P, lang: Lang, r: Rng, grade: Grade): Lesson
     hint: spec.hint(p, lang),
     question: spec.question(p, lang),
     example: spec.solved(ex, lang),
+    exampleFrames: spec.frames?.(ex, lang),
+    own: spec.own?.(p, lang),
     together: spec.together(p, lang),
     bar: spec.bar?.(p, lang),
     source: "local",
