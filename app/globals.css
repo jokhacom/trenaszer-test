@@ -280,8 +280,8 @@ h2 {
   padding: 4px 10px;
 }
 
-/* Zukko speech */
-.zukko-row {
+/* Mirodil speech */
+.mirodil-row {
   display: flex;
   align-items: flex-end;
   gap: 12px;
@@ -626,7 +626,7 @@ textarea.answer-input {
   letter-spacing: 6px;
 }
 
-.zukko-bob {
+.mirodil-bob {
   animation: bob 2.4s ease-in-out infinite;
 }
 
@@ -640,7 +640,7 @@ textarea.answer-input {
   .confetti {
     display: none;
   }
-  .zukko-bob,
+  .mirodil-bob,
   .spinner {
     animation: none;
   }

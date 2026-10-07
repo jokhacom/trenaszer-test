@@ -1,17 +1,17 @@
-// Zukko — the helper character in a Chust doppi (black skullcap with four
+// Mirodil — the helper character in a Chust doppi (black skullcap with four
 // white pepper-shaped motifs) and an atlas-striped chapan.
 
 export type Mood = "happy" | "think" | "cheer";
 
-export default function Zukko({ size = 96, mood = "happy" }: { size?: number; mood?: Mood }) {
+export default function Mirodil({ size = 96, mood = "happy" }: { size?: number; mood?: Mood }) {
   return (
     <svg
-      className="zukko-bob"
+      className="mirodil-bob"
       width={size}
       height={size * (140 / 120)}
       viewBox="0 0 120 140"
       role="img"
-      aria-label="Zukko"
+      aria-label="Mirodil"
       style={{ flex: "none" }}
     >
       <defs>

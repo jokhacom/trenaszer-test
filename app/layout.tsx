@@ -9,7 +9,7 @@ const nunito = Nunito({
 });
 
 export const metadata: Metadata = {
-  title: "Zukko — o‘zing yech!",
+  title: "Mirodil — o‘zing yech!",
   description: "AI-помощник для учёбы школьников 1–4 классов: не даёт готовый ответ, а помогает решить самому.",
 };
 

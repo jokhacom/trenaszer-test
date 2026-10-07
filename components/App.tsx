@@ -10,7 +10,7 @@ import Ladder from "./Ladder";
 import Listen from "./Listen";
 import PhotoFlow from "./PhotoFlow";
 import Session from "./Session";
-import Zukko from "./Zukko";
+import Mirodil from "./Mirodil";
 
 type Screen = "welcome" | "home" | "photo" | "session" | "bar" | "practice";
 
@@ -41,6 +41,11 @@ export default function App() {
     if (profile) document.documentElement.lang = profile.lang;
   }, [profile]);
 
+  // A new screen starts at the top, not where the previous one was scrolled.
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [screen]);
+
   if (!ready) return null;
 
   const home = () => setScreen("home");
@@ -52,7 +57,7 @@ export default function App() {
         {profile && screen !== "welcome" && (
           <header className="topbar">
             <button className="brand" onClick={home} aria-label={tr(profile.lang, "home")}>
-              <Zukko size={44} />
+              <Mirodil size={44} />
               <span>
                 {tr(profile.lang, "appName")}
                 <small>{tr(profile.lang, "tagline")}</small>
@@ -124,8 +129,8 @@ function Welcome({ initial, onStart }: { initial: Profile | null; onStart: (p: P
 
   return (
     <div className="stack">
-      <div className="zukko-row" style={{ alignItems: "center" }}>
-        <Zukko size={120} mood="cheer" />
+      <div className="mirodil-row" style={{ alignItems: "center" }}>
+        <Mirodil size={120} mood="cheer" />
         <div className="bubble">
           <h1 style={{ marginBottom: 6 }}>{tr(lang, "hello")}</h1>
           {tr(lang, "helloMore")}
@@ -190,8 +195,8 @@ function Home({
 
   return (
     <div className="stack">
-      <div className="zukko-row">
-        <Zukko size={80} />
+      <div className="mirodil-row">
+        <Mirodil size={80} />
         <div className="bubble">
           <b>
             {avatar} {tr(lang, "homeHello")}

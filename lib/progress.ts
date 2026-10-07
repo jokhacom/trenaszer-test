@@ -20,8 +20,8 @@ export interface TopicStat {
 
 type Progress = Partial<Record<Topic, TopicStat>>;
 
-const PROFILE_KEY = "zukko:profile";
-const PROGRESS_KEY = "zukko:progress";
+const PROFILE_KEY = "mirodil:profile";
+const PROGRESS_KEY = "mirodil:progress";
 
 function read<T>(key: string): T | null {
   try {

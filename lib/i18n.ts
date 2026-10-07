@@ -6,7 +6,7 @@ import type { Tr } from "./words";
 // Spelling must be checked against imlo.uz before release.
 
 const S = {
-  appName: { uz: "Zukko", ru: "Зукко", en: "Zukko" },
+  appName: { uz: "Mirodil", ru: "Миродил", en: "Mirodil" },
   tagline: {
     uz: "Javobni aytmayman — o‘zing topishingga yordam beraman",
     ru: "Я не говорю ответ — я помогаю найти его самому",
@@ -14,7 +14,7 @@ const S = {
   },
 
   // Welcome
-  hello: { uz: "Salom! Men Zukkoman.", ru: "Привет! Я Зукко.", en: "Hi! I'm Zukko." },
+  hello: { uz: "Salom! Men Mirodilman.", ru: "Привет! Я Миродил.", en: "Hi! I'm Mirodil." },
   helloMore: {
     uz: "Masalalarni birga yechamiz. Lekin javobni o‘zing topasan!",
     ru: "Будем решать задачи вместе. Но ответ ты найдёшь сам!",

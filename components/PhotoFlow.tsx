@@ -6,7 +6,7 @@ import { shrinkPhoto } from "@/lib/image";
 import { recordResult } from "@/lib/progress";
 import type { Grade, Lang, Lesson, Topic } from "@/lib/types";
 import Ladder from "./Ladder";
-import Zukko from "./Zukko";
+import Mirodil from "./Mirodil";
 
 type Stage =
   | { s: "start" }
@@ -94,8 +94,8 @@ export default function PhotoFlow({ lang, grade, ai, onHome }: { lang: Lang; gra
 
   return (
     <div className="stack">
-      <div className="zukko-row">
-        <Zukko size={72} mood={stage.s === "busy" ? "think" : "happy"} />
+      <div className="mirodil-row">
+        <Mirodil size={72} mood={stage.s === "busy" ? "think" : "happy"} />
         <div className="bubble">
           {stage.s === "busy" ? t(stage.what) : stage.s === "pick" ? t("pickOne") : stage.s === "confirm" ? t("isThisIt") : message ?? t("photoDesc")}
         </div>

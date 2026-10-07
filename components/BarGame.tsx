@@ -9,7 +9,7 @@ import type { BarSpec, Grade, Lang, Topic } from "@/lib/types";
 import BarDiagram from "./BarDiagram";
 import Celebrate from "./Celebrate";
 import Listen from "./Listen";
-import Zukko from "./Zukko";
+import Mirodil from "./Mirodil";
 
 const KINDS: BarSpec["kind"][] = ["total", "remain", "more", "less"];
 const ADD = 1;
@@ -92,8 +92,8 @@ export default function BarGame({ lang, grade }: { lang: Lang; grade: Grade }) {
         <div className="task-text long">{lesson.task}</div>
       </div>
 
-      <div className="zukko-row">
-        <Zukko size={56} mood={stage === "done" ? "cheer" : mistakes > 0 ? "think" : "happy"} />
+      <div className="mirodil-row">
+        <Mirodil size={56} mood={stage === "done" ? "cheer" : mistakes > 0 ? "think" : "happy"} />
         <div className={`bubble${stage === "done" ? " bubble-good" : ""}`}>{note}</div>
       </div>
 

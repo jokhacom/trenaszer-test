@@ -7,7 +7,7 @@ import { recordResult, sessionTopics } from "@/lib/progress";
 import type { Grade, Lang, Topic } from "@/lib/types";
 import Celebrate from "./Celebrate";
 import Ladder, { type LadderResult } from "./Ladder";
-import Zukko from "./Zukko";
+import Mirodil from "./Mirodil";
 
 const TASKS = 5;
 const MINUTES = 10;
@@ -40,7 +40,7 @@ export default function Session({ lang, grade, onHome }: { lang: Lang; grade: Gr
       <div className="stack">
         <Celebrate />
         <div className="card stack" style={{ textAlign: "center", justifyItems: "center" }}>
-          <Zukko size={110} mood="cheer" />
+          <Mirodil size={110} mood="cheer" />
           <h1>{tr(lang, finished === "time" ? "timeUp" : "sessionDone")}</h1>
           <div className="stars" aria-hidden>
             {"⭐".repeat(Math.max(self, 1))}
