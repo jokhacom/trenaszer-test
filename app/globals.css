@@ -266,7 +266,6 @@ h2 {
 .tile-read {
   background: var(--soft-yellow);
   border-color: #f3dc94;
-  cursor: default;
 }
 
 .badge {
@@ -917,4 +916,35 @@ textarea.answer-input {
   min-height: 48px;
   font-size: 18px;
   padding: 8px 16px;
+}
+
+/* Read together */
+.story {
+  margin: 0;
+  font-size: 22px;
+  line-height: 1.6;
+  font-weight: 700;
+}
+
+.story-mark {
+  background: var(--soft-yellow);
+  box-shadow: 0 0 0 3px var(--yellow);
+  border-radius: 6px;
+}
+
+/* Parent report */
+.report-list {
+  margin: 0;
+  padding-left: 20px;
+  display: grid;
+  gap: 6px;
+}
+
+.link-btn {
+  background: none;
+  border: none;
+  color: var(--blue);
+  font-weight: 800;
+  text-decoration: underline;
+  padding: 8px 0;
 }

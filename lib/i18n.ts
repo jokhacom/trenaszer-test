@@ -34,6 +34,7 @@ const S = {
   barTitle: { uz: "Masala chizmasini yig‘", ru: "Собери схему задачи", en: "Build the problem picture" },
   barDesc: { uz: "Kesmalar bilan o‘yin", ru: "Игра с отрезками", en: "A game with bars" },
   readTitle: { uz: "Birga o‘qiymiz", ru: "Читаем вместе", en: "Let's read together" },
+  readDesc: { uz: "Hikoya va savollar", ru: "История и вопросы", en: "A story and questions" },
   soon: { uz: "Tez orada", ru: "Скоро", en: "Coming soon" },
   repeatTitle: { uz: "Takrorlab olamiz", ru: "Повторим", en: "Let's practise again" },
   settings: { uz: "Sozlamalar", ru: "Настройки", en: "Settings" },
@@ -94,6 +95,7 @@ const S = {
 
   // Lesson
   yourTask: { uz: "Masala", ru: "Задача", en: "Problem" },
+  tryChoose: { uz: "O‘zing yechib ko‘r. To‘g‘ri javobni tanla:", ru: "Попробуй решить сам. Выбери ответ:", en: "Try it yourself. Choose the answer:" },
   tryAlone: { uz: "O‘zing yechib ko‘r. Javobni yoz:", ru: "Попробуй решить сам. Напиши ответ:", en: "Try it yourself. Write your answer:" },
   answerPlaceholder: { uz: "Javob", ru: "Ответ", en: "Answer" },
   check: { uz: "Tekshirish", ru: "Проверить", en: "Check" },
@@ -171,6 +173,50 @@ const S = {
     en: "10 minutes are up — that's enough for today. Great work!",
   },
   skip: { uz: "Boshqa masala", ru: "Другая задача", en: "Another problem" },
+
+  // Read together
+  readPick: { uz: "Qaysi hikoyani o‘qiymiz?", ru: "Какую историю читаем?", en: "Which story shall we read?" },
+  readFirst: {
+    uz: "Avval hikoyani o‘qi yoki tingla. Keyin savollarga javob beramiz.",
+    ru: "Сначала прочитай или послушай историю. Потом ответим на вопросы.",
+    en: "First read or listen to the story. Then we'll answer questions.",
+  },
+  readQuestions: { uz: "Savollarga o‘tamiz", ru: "К вопросам", en: "To the questions" },
+  readLookAgain: {
+    uz: "Matnda belgilangan gapni yana bir bor o‘qi — javob o‘sha yerda.",
+    ru: "Перечитай выделенное предложение в тексте — ответ там.",
+    en: "Reread the highlighted sentence in the story — the answer is there.",
+  },
+  readDone: { uz: "Hikoya tugadi! Barakalla!", ru: "История прочитана! Молодец!", en: "Story finished! Well done!" },
+  readFirstTry: { uz: "Birinchi urinishda to‘g‘ri javoblar:", ru: "Верно с первого раза:", en: "Right on the first try:" },
+  readOther: { uz: "Boshqa hikoya", ru: "Другая история", en: "Another story" },
+
+  // Parent report
+  parentTitle: { uz: "Ota-onalar uchun", ru: "Для родителей", en: "For parents" },
+  parentEmpty: {
+    uz: "Hali ma’lumot kam. Farzandingiz bir nechta masala yechgandan keyin bu yerda hisobot paydo bo‘ladi.",
+    ru: "Пока мало данных. Отчёт появится, когда ребёнок решит несколько задач.",
+    en: "Not enough data yet. The report will appear after your child solves a few problems.",
+  },
+  parentGood: { uz: "Yaxshi chiqyapti", ru: "Хорошо получается", en: "Going well" },
+  parentHard: { uz: "Hozircha qiyin", ru: "Пока трудно", en: "Still hard" },
+  parentPractice: { uz: "10 daqiqalik mashqlar", ru: "Задания на 10 минут", en: "10-minute practice" },
+  parentPracticeNote: {
+    uz: "Har bir mavzu bo‘yicha bitta masala oching va farzandingiz o‘zi yechsin. Javobni aytmang — Mirodil yordam beradi.",
+    ru: "Откройте по одной задаче на каждую тему, и пусть ребёнок решит сам. Ответ не подсказывайте — Миродил поможет.",
+    en: "Open one problem per topic and let your child solve it. Don't tell the answer — Mirodil will help.",
+  },
+  parentActivity: { uz: "Faollik", ru: "Активность", en: "Activity" },
+  parentSolved: { uz: "Mustaqil yechilgan masalalar", ru: "Задач решено самостоятельно", en: "Problems solved independently" },
+  parentWithHelp: { uz: "Yordam bilan", ru: "С помощью", en: "With help" },
+  parentDays: { uz: "So‘nggi 7 kunda faol kunlar", ru: "Дней с занятиями за последние 7", en: "Active days in the last 7" },
+  parentStories: { uz: "O‘qilgan hikoyalar", ru: "Прочитано историй", en: "Stories read" },
+  parentOpen: { uz: "Masalani ochish", ru: "Открыть задачу", en: "Open a problem" },
+  parentPrivacy: {
+    uz: "Ma’lumotlar faqat shu qurilmada saqlanadi.",
+    ru: "Данные хранятся только на этом устройстве.",
+    en: "Data is stored only on this device.",
+  },
 
   // Bar model game
   barStep1: { uz: "Qaysi chizma masalaga mos keladi?", ru: "Какая схема подходит к задаче?", en: "Which picture matches the problem?" },

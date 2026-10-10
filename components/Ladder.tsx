@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { GENTLE_WRONG, PRAISE, tr, type Key } from "@/lib/i18n";
+import { matchesText } from "@/lib/answers";
 import { classifyInput, sameNumber, vary, WRONG_BEFORE_STEP_UP, type Level } from "@/lib/ladder";
 import { speak, stopSpeaking } from "@/lib/speech";
 import type { Frame, Grade, Lang, Lesson, Step, Visual as V } from "@/lib/types";
@@ -55,9 +56,10 @@ export default function Ladder({
   // (Singapore: concrete → pictorial → abstract). Without an example, a hint.
   const hasExample = (lesson.exampleFrames?.length ?? 0) > 0 || lesson.example.length > 0;
   const levels: Level[] = ["try", hasExample ? "example" : "hint", "question", "together"];
+  const kind = lesson.answerKind ?? "number";
 
   const [level, setLevel] = useState<Level>("try");
-  const [msgs, setMsgs] = useState<Msg[]>([{ from: "mirodil", text: t("tryAlone") }]);
+  const [msgs, setMsgs] = useState<Msg[]>([{ from: "mirodil", text: t(lesson.answerKind === "choice" ? "tryChoose" : "tryAlone") }]);
   const [pending, setPending] = useState<Pending>(null);
   const [wrong, setWrong] = useState(0);
   const [solved, setSolved] = useState(false);
@@ -172,10 +174,13 @@ export default function Ladder({
       }
       return;
     }
-    // The child's own final answer.
-    if (sameNumber(value, lesson.answer)) {
-      win();
-    } else if (wrong + 1 >= WRONG_BEFORE_STEP_UP) {
+    // The child's own final answer (for "choice" lessons, the index of the option).
+    if (sameNumber(value, lesson.answer)) win();
+    else wrongFinal();
+  }
+
+  function wrongFinal() {
+    if (wrong + 1 >= WRONG_BEFORE_STEP_UP) {
       stepUp({ from: "mirodil", text: vary(GENTLE_WRONG[lang], seed.current++) });
     } else {
       setWrong(wrong + 1);
@@ -185,6 +190,18 @@ export default function Ladder({
   }
 
   function submit(raw: string) {
+    // A written answer (a word or phrase) for the child's own task.
+    if (!pending && kind === "text") {
+      const text = raw.trim();
+      setInput("");
+      if (!text) return;
+      say({ from: "kid", text });
+      if (matchesText(text, lesson.accepted ?? [])) return win();
+      const c = classifyInput(text);
+      if (c.kind === "askAnswer") return stepUp({ from: "mirodil", text: t("refuse") });
+      if (c.kind === "stuck") return stepUp({ from: "mirodil", text: t("stuck") });
+      return wrongFinal();
+    }
     const c = classifyInput(raw);
     setInput("");
     if (c.kind === "empty") return;
@@ -200,6 +217,10 @@ export default function Ladder({
     onNext?.();
   }
 
+  // Buttons instead of typing: a step with options, or a "choice" lesson's final answer.
+  const options =
+    (pending?.kind === "question" ? lesson.question.options : pending?.kind === "together" ? lesson.together[pending.i].options : undefined) ??
+    (!pending && kind === "choice" ? (lesson.choices ?? []).map((label, value) => ({ label, value })) : undefined);
   const step: Step | null =
     pending?.kind === "question" ? lesson.question : pending?.kind === "together" ? lesson.together[pending.i] : null;
   const isLong = lesson.task.length > 40;
@@ -252,9 +273,9 @@ export default function Ladder({
 
       {!solved && (
         <div className="stack">
-          {step?.options ? (
+          {options ? (
             <div className="options">
-              {step.options.map((o) => (
+              {options.map((o) => (
                 <button key={o.value} className="btn btn-blue" onClick={() => answerNumber(o.value, o.label)}>
                   {o.label}
                 </button>

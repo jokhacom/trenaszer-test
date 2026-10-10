@@ -3,7 +3,7 @@
 import { useRef, useState } from "react";
 import { tr, type Key } from "@/lib/i18n";
 import { shrinkPhoto } from "@/lib/image";
-import { recordResult } from "@/lib/progress";
+import { recordPhotoTask, recordResult } from "@/lib/progress";
 import type { Grade, Lang, Lesson, Topic } from "@/lib/types";
 import Ladder from "./Ladder";
 import Mirodil from "./Mirodil";
@@ -119,6 +119,7 @@ export default function PhotoFlow({ lang, grade, ai, onHome }: { lang: Lang; gra
         grade={grade}
         onDone={(r) => {
           if (stage.lesson.topic !== "other") recordResult(stage.lesson.topic as Topic, r.solved, r.maxLevel);
+          else recordPhotoTask(r.solved, r.maxLevel);
           if (r.solved && current !== null) setDone((d) => [...d, current]);
         }}
         onNext={() => {
