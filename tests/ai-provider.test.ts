@@ -100,6 +100,24 @@ describe("Gemini requests", () => {
     expect(generateContent.mock.calls[1][0].config.thinkingConfig).toBeUndefined();
   });
 
+  it("switches to the other Gemini model when one is overloaded", async () => {
+    env({ GEMINI_API_KEY: "g" });
+    generateContent
+      .mockRejectedValueOnce(new ApiError({ message: "The model is overloaded", status: 503 }))
+      .mockResolvedValueOnce({ text: '{"readable": true, "tasks": ["8 + 5"]}' });
+    const out = await readTask("AAAA", "image/png");
+    expect(out.tasks).toEqual([{ title: "", text: "8 + 5" }]);
+    const [first, second] = generateContent.mock.calls.map((c) => c[0].model);
+    expect(first).not.toBe(second);
+  });
+
+  it("gives up with the code when both models are overloaded", async () => {
+    env({ GEMINI_API_KEY: "g" });
+    generateContent.mockRejectedValue(new ApiError({ message: "The model is overloaded", status: 503 }));
+    await expect(readTask("AAAA", "image/png")).rejects.toMatchObject({ code: "gemini-503" });
+    expect(generateContent).toHaveBeenCalledTimes(2);
+  });
+
   it("reports a short error code", async () => {
     env({ GEMINI_API_KEY: "g" });
     generateContent.mockRejectedValue(new ApiError({ message: "API key not valid", status: 403 }));
