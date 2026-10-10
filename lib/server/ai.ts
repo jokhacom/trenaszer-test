@@ -232,7 +232,10 @@ async function askClaude(system: string, input: Input, schema: Record<string, un
 
 async function askGemini(system: string, input: Input, schema: Record<string, unknown>, job: Job): Promise<unknown> {
   geminiClient ??= new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
-  const model = job.kind === "read" ? GEMINI_READ_MODEL : GEMINI_MODEL;
+  // When Google's model is overloaded (503) or out of free quota (429), the
+  // other model usually still answers: the lighter one is faster, the main one smarter.
+  const models = job.kind === "read" ? [GEMINI_READ_MODEL, GEMINI_MODEL] : [GEMINI_MODEL, GEMINI_READ_MODEL];
+  let m = 0;
   const parts: ({ inlineData: { mimeType: string; data: string } } | { text: string })[] = [];
   if (input.image) parts.push({ inlineData: { mimeType: input.image.mediaType, data: input.image.data } });
   parts.push({ text: input.text });
@@ -247,7 +250,8 @@ async function askGemini(system: string, input: Input, schema: Record<string, un
   ];
   // The whole job, including retries, must finish before the hosting cuts it off.
   const deadline = Date.now() + job.budgetMs;
-  for (let i = 0; ; i++) {
+  for (let i = 0; ; ) {
+    const model = models[m];
     const left = deadline - Date.now();
     if (left < 5_000) throw new AiError("ai_error", "gemini-timeout");
     const started = Date.now();
@@ -264,6 +268,12 @@ async function askGemini(system: string, input: Input, schema: Record<string, un
     } catch (e) {
       if (e instanceof ApiError && e.status === 400 && i < configs.length - 1) {
         console.warn(`Gemini ${model} rejected config ${i}, trying a simpler one:`, e.message);
+        i++;
+        continue;
+      }
+      if (e instanceof ApiError && [429, 500, 503, 504].includes(e.status) && m < models.length - 1 && models[m + 1] !== model) {
+        console.warn(`Gemini ${model} is busy (${e.status}), trying ${models[m + 1]}`);
+        m++;
         continue;
       }
       if (e instanceof Error && (e.name === "AbortError" || e.name === "TimeoutError")) {

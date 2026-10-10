@@ -127,9 +127,14 @@ export default function PhotoFlow({ lang, grade, ai, onHome }: { lang: Lang; gra
     setStage({ s: "busy", what: "thinking" });
     const early = withPhoto && prefetch.current?.text === text ? prefetch.current : null;
     // The photo goes along so the AI can read numbers from pictures and diagrams.
-    const r = await (early?.result ?? post("/api/lesson", { text, lang, grade, image: withPhoto ? (photo ?? undefined) : undefined }));
+    const fresh = () => post("/api/lesson", { text, lang, grade, image: withPhoto ? (photo ?? undefined) : undefined });
+    let r = await (early?.result ?? fresh());
+    if (!r.ok && early) {
+      // The early request failed (often a busy AI): ask once more before showing an error.
+      prefetch.current = null;
+      if (r.data.error !== "unsupported") r = await fresh();
+    }
     if (r.ok) return setStage({ s: "lesson", lesson: r.data.lesson as Lesson });
-    if (early) prefetch.current = null;
     showError(r);
     // If the photo had several questions, let the child pick another one.
     setStage(withPhoto && tasks.length > 1 ? { s: "pick" } : { s: "start" });
