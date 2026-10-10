@@ -2,7 +2,8 @@ import { aiEnabled, AiError, readTask } from "@/lib/server/ai";
 import { allow, clientIp } from "@/lib/server/store";
 
 export const runtime = "nodejs";
-export const maxDuration = 60;
+// Above the AI time limits in lib/server/ai.ts, so a slow answer ends with a clear error code.
+export const maxDuration = 120;
 
 const MAX_BASE64 = 7_000_000; // ~5 MB image; the browser shrinks photos before sending
 
