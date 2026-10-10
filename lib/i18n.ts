@@ -46,6 +46,17 @@ const S = {
   reading: { uz: "Masalani o‘qiyapman…", ru: "Читаю задачу…", en: "Reading the problem…" },
   thinking: { uz: "O‘ylayapman…", ru: "Думаю…", en: "Thinking…" },
   isThisIt: { uz: "Bu sening masalangmi?", ru: "Это твоя задача?", en: "Is this your problem?" },
+  pickMany: {
+    uz: "Bu masalada bir nechta savol bor. Qaysi biridan boshlaymiz?",
+    ru: "В этой задаче несколько вопросов. Выбери, с какого начнём:",
+    en: "This problem has several questions. Choose where to start:",
+  },
+  pickNext: {
+    uz: "Zo‘r! Endi keyingi savolni tanla:",
+    ru: "Отлично! Теперь выбери следующий вопрос:",
+    en: "Great! Now choose the next question:",
+  },
+  nextQuestion: { uz: "Keyingi savol", ru: "Следующий вопрос", en: "Next question" },
   pickOne: { uz: "Qaysi masalani yechamiz?", ru: "Какую задачу решаем?", en: "Which problem shall we solve?" },
   yes: { uz: "Ha, shu", ru: "Да, эта", en: "Yes, that's it" },
   fix: {
