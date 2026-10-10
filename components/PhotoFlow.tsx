@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { tr, type Key } from "@/lib/i18n";
 import { shrinkPhoto } from "@/lib/image";
 import { recordPhotoTask, recordResult } from "@/lib/progress";
@@ -10,10 +10,27 @@ import Mirodil from "./Mirodil";
 
 type Stage =
   | { s: "start" }
-  | { s: "busy"; what: Key }
+  | { s: "busy"; what: "reading" | "thinking" }
   | { s: "pick" }
   | { s: "confirm"; text: string }
   | { s: "lesson"; lesson: Lesson };
+
+type PostResult = { ok: boolean; status: number; data: Record<string, unknown> };
+
+/** Busy messages change while the child waits, so a long wait doesn't look frozen. */
+const WAIT_STEPS: Record<"reading" | "thinking", [number, Key][]> = {
+  reading: [[0, "reading"], [4_000, "reading2"], [15_000, "almost"]],
+  thinking: [[0, "thinking"], [4_000, "thinking2"], [10_000, "thinking3"], [22_000, "almost"]],
+};
+
+function Waiting({ lang, what }: { lang: Lang; what: "reading" | "thinking" }) {
+  const [shown, setShown] = useState<Key>(what);
+  useEffect(() => {
+    const timers = WAIT_STEPS[what].map(([ms, key]) => setTimeout(() => setShown(key), ms));
+    return () => timers.forEach(clearTimeout);
+  }, [what]);
+  return <>{tr(lang, shown)}</>;
+}
 
 /** One question read from the photo: a short button title and the full text. */
 interface PhotoTask {
@@ -33,9 +50,12 @@ export default function PhotoFlow({ lang, grade, ai, onHome }: { lang: Lang; gra
   const [current, setCurrent] = useState<number | null>(null);
   const [done, setDone] = useState<number[]>([]);
   const fileRef = useRef<HTMLInputElement>(null);
+  // The lesson for the first question starts building while the child is
+  // still checking the text, so "Yes" usually opens it at once.
+  const prefetch = useRef<{ text: string; result: Promise<PostResult> } | null>(null);
 
   /** POST with a time limit. Returns the JSON reply, or an error code to show the user. */
-  async function post(url: string, body: unknown): Promise<{ ok: boolean; status: number; data: Record<string, unknown> }> {
+  async function post(url: string, body: unknown): Promise<PostResult> {
     const ctrl = new AbortController();
     // A bit longer than the server's own AI time limits.
     const timer = setTimeout(() => ctrl.abort(), 125_000);
@@ -75,6 +95,7 @@ export default function PhotoFlow({ lang, grade, ai, onHome }: { lang: Lang; gra
       return;
     }
     setPhoto(dataUrl);
+    prefetch.current = null;
     if (!ai) {
       setMessage(t("aiOff"));
       setStage({ s: "start" });
@@ -94,19 +115,21 @@ export default function PhotoFlow({ lang, grade, ai, onHome }: { lang: Lang; gra
     } else if (!r.data.readable || found.length === 0) {
       setMessage(t("notSupported"));
       setStage({ s: "start" });
-    } else if (found.length === 1) {
-      setStage({ s: "confirm", text: found[0].text });
     } else {
-      setStage({ s: "pick" });
+      const first = found[0].text;
+      prefetch.current = { text: first, result: post("/api/lesson", { text: first, lang, grade, image: dataUrl }) };
+      setStage(found.length === 1 ? { s: "confirm", text: first } : { s: "pick" });
     }
   }
 
   async function buildLesson(text: string, withPhoto: boolean) {
     setMessage(null);
     setStage({ s: "busy", what: "thinking" });
+    const early = withPhoto && prefetch.current?.text === text ? prefetch.current : null;
     // The photo goes along so the AI can read numbers from pictures and diagrams.
-    const r = await post("/api/lesson", { text, lang, grade, image: withPhoto ? (photo ?? undefined) : undefined });
+    const r = await (early?.result ?? post("/api/lesson", { text, lang, grade, image: withPhoto ? (photo ?? undefined) : undefined }));
     if (r.ok) return setStage({ s: "lesson", lesson: r.data.lesson as Lesson });
+    if (early) prefetch.current = null;
     showError(r);
     // If the photo had several questions, let the child pick another one.
     setStage(withPhoto && tasks.length > 1 ? { s: "pick" } : { s: "start" });
@@ -143,7 +166,7 @@ export default function PhotoFlow({ lang, grade, ai, onHome }: { lang: Lang; gra
         <Mirodil size={72} mood={stage.s === "busy" ? "think" : "happy"} />
         <div className="bubble">
           {stage.s === "busy"
-            ? t(stage.what)
+            ? <Waiting key={stage.what} lang={lang} what={stage.what} />
             : stage.s === "pick"
               ? message ?? t(done.length > 0 ? "pickNext" : "pickMany")
               : stage.s === "confirm"
