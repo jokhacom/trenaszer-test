@@ -9,7 +9,8 @@ import Anthropic from "@anthropic-ai/sdk";
 import { ApiError, GoogleGenAI, ThinkingLevel } from "@google/genai";
 import { evaluate } from "../expression";
 import { containsNumber } from "../problems";
-import type { Grade, Lang, Lesson, Step } from "../types";
+import { containsText } from "../answers";
+import type { AnswerKind, BarSpec, Frame, Grade, Lang, Lesson, Step, Subject, Visual } from "../types";
 
 export const CLAUDE_MODEL = process.env.CLAUDE_MODEL || "claude-sonnet-5-5";
 export const GEMINI_MODEL = process.env.GEMINI_MODEL || "gemini-flash-latest";
@@ -66,29 +67,43 @@ Transcribe every school task you can see in the photo exactly as written, keepin
 ${STYLE}`;
 
 const LESSON_SYSTEM = `You are Mirodil, a patient tutor for primary-school children (grades 1–4) in Uzbekistan.
-The product's main rule: the AI never does the homework for the child. It never gives the answer to the child's own task — not in a hint, not in a question, not in an example. The child must find the answer.
+The product's main rule: the AI never does the homework for the child. It never gives the answer to the child's own task — not in a hint, not in a question, not in an example, not in a picture. The child must find the answer.
 
-You receive one task, sometimes with a photo of the textbook page. Use the photo to read numbers from pictures, diagrams, number lines and tables. Build a help ladder for it. The app shows the steps one by one, only when the child asks for help:
-1. hint — a direction: where to look, what to start with. Do not contain the answer.
-2. question — one leading question the child answers with a number. "expect" is the number the child should give. The prompt must not contain the final answer, and "expect" must not be the final answer.
-3. example — a similar but SIMPLER task, with DIFFERENT numbers, solved in full, line by line (3–6 short lines). The first line names it as a similar example. Its numbers and its result must differ from the child's task and from its answer.
-4. together — 2–6 small steps through the child's own task. Each step is a question with a numeric "expect". The child does every calculation. The last step's expect is the final answer, but its prompt must not state it.
+You receive one task, sometimes with a photo of the textbook page. Use the photo to read numbers and words from pictures, diagrams, number lines, tables and texts. Subjects: maths, mother tongue and Russian (letters, spelling, words, grammar), reading (questions about a text), English, and "the world around us" (nature, people, safety).
 
-Teaching approach (Singapore primary mathematics): concrete → pictorial → abstract. Start from objects or a picture, then numbers. For word problems think in parts and wholes (bar model). Use problem-solving strategies: draw a model, act it out, look for a pattern, work backwards, solve a simpler problem.
+First decide how the child will give the final answer (answer_kind):
+- "number": a single number (most maths). Fill answer_number and solution_expression.
+- "choice": the child picks one of 2–4 short options (choose a word, a letter, true/false, which animal…). Fill choices and correct_choice (0-based). Shuffle the options; the right one must not always be first.
+- "text": the child writes a short word or phrase (a missing letter, a word in the right form, an English word). Fill accepted with every correct spelling (2–5 variants if several are right).
+Fill the fields of the other kinds with empty values.
+
+Build a help ladder. The app shows the steps one by one, only when the child asks for help:
+1. hint — a direction: where to look, what to start with, which rule to remember.
+2. question — one leading question. kind "number" (expect = the number) or kind "choice" (options and expect = index of the right option). It must not reveal the final answer.
+3. example_frames — a similar but SIMPLER task with DIFFERENT numbers or words, solved in full as 3–5 short slides. The first slide names it as a similar example. Its result must differ from the child's answer.
+4. together — 2–6 small steps through the child's own task. Each step is kind "number" or kind "choice". The child does every step. The last step leads to the final answer, but its prompt must not state it.
+
+Teaching approach (Singapore primary education): concrete → pictorial → abstract. Start from objects or a picture, then numbers or rules. For maths word problems think in parts and wholes (bar model). Strategies: draw a model, act it out, look for a pattern, work backwards, solve a simpler problem. For reading, send the child back to the right place in the text. For language, show the rule on a similar word.
+
+Pictures (picture objects; kind "none" when not useful):
+- "bar": bar model for a word problem: bar_kind total (two parts, whole unknown), remain (whole a, b taken away), more (b more than a), less (b fewer than a); a and b are the numbers from the task, label_a and label_b are short names.
+- "objects": up to 30 small objects; a and b are two groups; emoji is one emoji for the object.
+- "groups": multiplication or division; a groups with b objects each; emoji for the object.
+own_picture shows the child's own task and must never show its answer. Each example slide may have a picture of the example.
 
 Also return:
 - task: the task text, cleaned up, in the output language.
 - topic: a short topic name in the output language.
-- answer: the final numeric answer.
-- solution_expression: one arithmetic expression with only digits, + - * / ( ) that evaluates to the answer, e.g. "(15 - 6) * 2". The app uses it to check your answer.
+- subject: math, language, reading, english or world.
+- solution_expression (only for "number"): one arithmetic expression with only digits, + - * / ( ) that evaluates to the answer, e.g. "(15 - 6) * 2". The app uses it to check your answer.
 
 Set supported to false (and fill the other fields with empty values) when:
 - it is not a school task for grades 1–4, or it is unsafe or unrelated to studies;
-- the final answer is not a single number (comparison signs, words, drawings, several answers);
+- the answer cannot be checked as one number, one choice or a short word (drawings, essays, several answers at once, opinions);
 - the task text is unclear.
 In "reason" explain briefly in the output language.
 
-Write every text in the output language given by the user, even if the task is in another language.
+Write every text in the output language given by the user, even if the task is in another language — except in English tasks, where the English words the child must learn stay in English.
 ${STYLE}`;
 
 const READ_SCHEMA = {
@@ -111,8 +126,28 @@ const READ_SCHEMA = {
 
 const STEP_SCHEMA = {
   type: "object",
-  properties: { prompt: { type: "string" }, expect: { type: "number" } },
-  required: ["prompt", "expect"],
+  properties: {
+    prompt: { type: "string" },
+    kind: { type: "string", enum: ["number", "choice"] },
+    expect: { type: "number" },
+    options: { type: "array", items: { type: "string" } },
+  },
+  required: ["prompt", "kind", "expect", "options"],
+  additionalProperties: false,
+};
+
+const PICTURE_SCHEMA = {
+  type: "object",
+  properties: {
+    kind: { type: "string", enum: ["none", "bar", "objects", "groups"] },
+    bar_kind: { type: "string", enum: ["total", "remain", "more", "less"] },
+    a: { type: "integer" },
+    b: { type: "integer" },
+    label_a: { type: "string" },
+    label_b: { type: "string" },
+    emoji: { type: "string" },
+  },
+  required: ["kind", "bar_kind", "a", "b", "label_a", "label_b", "emoji"],
   additionalProperties: false,
 };
 
@@ -121,16 +156,33 @@ const LESSON_SCHEMA = {
   properties: {
     supported: { type: "boolean" },
     reason: { type: "string" },
+    subject: { type: "string", enum: ["math", "language", "reading", "english", "world"] },
     task: { type: "string" },
     topic: { type: "string" },
-    answer: { type: "number" },
+    answer_kind: { type: "string", enum: ["number", "choice", "text"] },
+    answer_number: { type: "number" },
     solution_expression: { type: "string" },
+    choices: { type: "array", items: { type: "string" } },
+    correct_choice: { type: "integer" },
+    accepted: { type: "array", items: { type: "string" } },
     hint: { type: "string" },
     question: STEP_SCHEMA,
-    example: { type: "array", items: { type: "string" } },
+    example_frames: {
+      type: "array",
+      items: {
+        type: "object",
+        properties: { text: { type: "string" }, picture: PICTURE_SCHEMA },
+        required: ["text", "picture"],
+        additionalProperties: false,
+      },
+    },
     together: { type: "array", items: STEP_SCHEMA },
+    own_picture: PICTURE_SCHEMA,
   },
-  required: ["supported", "reason", "task", "topic", "answer", "solution_expression", "hint", "question", "example", "together"],
+  required: [
+    "supported", "reason", "subject", "task", "topic", "answer_kind", "answer_number", "solution_expression",
+    "choices", "correct_choice", "accepted", "hint", "question", "example_frames", "together", "own_picture",
+  ],
   additionalProperties: false,
 };
 
@@ -260,17 +312,40 @@ export async function readTask(
   return { readable: out.readable, tasks };
 }
 
-interface RawLesson {
+interface RawStep {
+  prompt: string;
+  kind: "number" | "choice";
+  expect: number;
+  options: string[];
+}
+
+interface RawPicture {
+  kind: "none" | "bar" | "objects" | "groups";
+  bar_kind: BarSpec["kind"];
+  a: number;
+  b: number;
+  label_a: string;
+  label_b: string;
+  emoji: string;
+}
+
+export interface RawLesson {
   supported: boolean;
   reason: string;
+  subject: Subject;
   task: string;
   topic: string;
-  answer: number;
+  answer_kind: AnswerKind;
+  answer_number: number;
   solution_expression: string;
+  choices: string[];
+  correct_choice: number;
+  accepted: string[];
   hint: string;
-  question: Step;
-  example: string[];
-  together: Step[];
+  question: RawStep;
+  example_frames: { text: string; picture: RawPicture }[];
+  together: RawStep[];
+  own_picture: RawPicture;
 }
 
 const GENERIC_HINT: Record<Lang, string> = {
@@ -291,27 +366,98 @@ export async function buildLesson(task: string, lang: Lang, grade: Grade, image?
   return checkLesson(raw, lang);
 }
 
+/** Turns the AI's step into an app step; null if it is broken. */
+function toStep(st: RawStep): Step | null {
+  if (!st?.prompt?.trim()) return null;
+  if (st.kind === "choice") {
+    const options = (st.options ?? []).map((o) => o.trim()).filter(Boolean);
+    if (options.length < 2 || !Number.isInteger(st.expect) || st.expect < 0 || st.expect >= options.length) return null;
+    return { prompt: st.prompt, expect: st.expect, options: options.map((label, value) => ({ label, value })) };
+  }
+  return Number.isFinite(st.expect) ? { prompt: st.prompt, expect: st.expect } : null;
+}
+
+const okInt = (n: number, lo: number, hi: number) => Number.isInteger(n) && n >= lo && n <= hi;
+
+/** Turns the AI's picture into a Visual the app can draw; undefined if unsafe or broken. */
+export function toVisual(p: RawPicture | undefined): Visual | undefined {
+  if (!p || p.kind === "none") return undefined;
+  const emoji = [...(p.emoji ?? "").trim()].slice(0, 2).join("") || "⭐";
+  if (p.kind === "bar" && okInt(p.a, 1, 100000) && okInt(p.b, 1, 100000) && ["total", "remain", "more", "less"].includes(p.bar_kind)) {
+    return { kind: "bar", spec: { kind: p.bar_kind, a: p.a, b: p.b, nameA: p.label_a.slice(0, 20), nameB: p.label_b.slice(0, 20) } };
+  }
+  if (p.kind === "objects" && okInt(p.a, 0, 30) && okInt(p.b, 0, 30) && p.a + p.b > 0 && p.a + p.b <= 30) {
+    return { kind: "objects", emoji, counts: [p.a, p.b].filter((n) => n > 0) };
+  }
+  if (p.kind === "groups" && okInt(p.a, 1, 10) && okInt(p.b, 1, 12)) {
+    return { kind: "groups", groups: p.a, each: p.b, emoji };
+  }
+  return undefined;
+}
+
+/** Numbers a picture shows, to make sure it never shows the answer. */
+function pictureNumbers(v: Visual | undefined): number[] {
+  if (!v) return [];
+  if (v.kind === "bar") return [v.spec.a, v.spec.b];
+  if (v.kind === "objects") return [...v.counts, v.counts.reduce((x, y) => x + y, 0)];
+  if (v.kind === "groups") return [v.groups, v.each, v.groups * v.each];
+  return [];
+}
+
 /**
- * The app does not take the AI's word for it: the answer is recomputed from the
- * expression, and any text that would reveal the answer is removed.
+ * The app does not take the AI's word for it: a numeric answer is recomputed
+ * from the expression, and any text or picture that would reveal the answer
+ * is removed.
  */
 export function checkLesson(raw: RawLesson, lang: Lang): LessonResult {
   if (!raw.supported) return { ok: false, reason: raw.reason };
-  const computed = evaluate(raw.solution_expression);
-  if (computed === null || Math.abs(computed - raw.answer) > 1e-9 || !Number.isFinite(raw.answer)) {
-    return { ok: false, reason: "answer-check-failed" };
-  }
-  const answer = raw.answer;
-  const leaks = (s: string) => containsNumber(s, answer);
+  const kind: AnswerKind = ["number", "choice", "text"].includes(raw.answer_kind) ? raw.answer_kind : "number";
 
-  const together = raw.together.filter((s) => s.prompt.trim() && !leaks(s.prompt));
+  let answer = 0;
+  let choices: string[] | undefined;
+  let accepted: string[] | undefined;
+  let leaks: (s: string) => boolean;
+  if (kind === "number") {
+    const computed = evaluate(raw.solution_expression);
+    if (computed === null || !Number.isFinite(raw.answer_number) || Math.abs(computed - raw.answer_number) > 1e-9) {
+      return { ok: false, reason: "answer-check-failed" };
+    }
+    answer = raw.answer_number;
+    leaks = (s) => containsNumber(s, answer);
+  } else if (kind === "choice") {
+    choices = (raw.choices ?? []).map((c) => c.trim()).filter(Boolean);
+    if (choices.length < 2 || !okInt(raw.correct_choice, 0, choices.length - 1)) return { ok: false, reason: "bad-choices" };
+    answer = raw.correct_choice;
+    const right = choices[answer];
+    leaks = (s) => containsText(s, right);
+  } else {
+    accepted = (raw.accepted ?? []).map((c) => c.trim()).filter(Boolean);
+    if (accepted.length === 0) return { ok: false, reason: "no-accepted" };
+    const words = accepted;
+    leaks = (s) => words.some((w) => containsText(s, w));
+  }
+
+  const together = (raw.together ?? [])
+    .map(toStep)
+    .filter((st): st is Step => st !== null && !leaks(st.prompt));
   if (together.length === 0) return { ok: false, reason: "no-steps" };
 
-  let question = raw.question;
-  if (leaks(question.prompt) || question.expect === answer) {
-    question = together.find((s) => s.expect !== answer) ?? together[0];
+  let question = toStep(raw.question);
+  if (!question || leaks(question.prompt) || (kind === "number" && !question.options && question.expect === answer)) {
+    question = together.find((st) => kind !== "number" || st.options || st.expect !== answer) ?? together[0];
   }
-  const example = raw.example.filter((line) => line.trim() && !leaks(line));
+
+  const frames: Frame[] = (raw.example_frames ?? [])
+    .filter((f) => f?.text?.trim() && !leaks(f.text))
+    .map((f) => {
+      const visual = toVisual(f.picture);
+      // An example picture must not happen to show the child's numeric answer either.
+      const safe = !(kind === "number" && pictureNumbers(visual).includes(answer));
+      return safe && visual ? { text: f.text, visual } : { text: f.text };
+    });
+
+  let own = toVisual(raw.own_picture);
+  if (own && kind === "number" && pictureNumbers(own).includes(answer)) own = undefined;
 
   return {
     ok: true,
@@ -319,11 +465,17 @@ export function checkLesson(raw: RawLesson, lang: Lang): LessonResult {
       id: `ai:${raw.task}`,
       topic: "other",
       lang,
+      subject: raw.subject,
       task: raw.task,
       answer,
+      answerKind: kind,
+      choices,
+      accepted,
       hint: leaks(raw.hint) ? GENERIC_HINT[lang] : raw.hint,
       question,
-      example: example.length >= 2 ? example : [],
+      example: frames.length >= 2 ? frames.map((f) => f.text) : [],
+      exampleFrames: frames.length >= 2 ? frames : undefined,
+      own,
       together,
       source: "ai",
     },

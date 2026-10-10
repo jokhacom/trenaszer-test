@@ -3,6 +3,16 @@ export const LANGS: Lang[] = ["uz", "ru", "en"];
 
 export type Grade = 1 | 2 | 3 | 4;
 
+/** School subjects the AI can help with (built-in tasks are all maths). */
+export type Subject = "math" | "language" | "reading" | "english" | "world";
+
+/**
+ * How the child gives the final answer: a number, a choice among options
+ * (`answer` is then the index of the right option), or a word or phrase
+ * checked against `accepted`.
+ */
+export type AnswerKind = "number" | "choice" | "text";
+
 export type Topic =
   | "add10"
   | "addCarry"
@@ -78,6 +88,13 @@ export interface Lesson {
   lang: Lang;
   task: string;
   answer: number;
+  /** Default "number". */
+  answerKind?: AnswerKind;
+  /** Options for answerKind "choice"; `answer` is the right index. */
+  choices?: string[];
+  /** Accepted spellings for answerKind "text". */
+  accepted?: string[];
+  subject?: Subject;
   hint: string;
   question: Step;
   example: string[];

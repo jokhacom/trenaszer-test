@@ -9,10 +9,12 @@ import BarGame from "./BarGame";
 import Ladder from "./Ladder";
 import Listen from "./Listen";
 import PhotoFlow from "./PhotoFlow";
+import ParentReport from "./ParentReport";
+import ReadTogether from "./ReadTogether";
 import Session from "./Session";
 import Mirodil from "./Mirodil";
 
-type Screen = "welcome" | "home" | "photo" | "session" | "bar" | "practice";
+type Screen = "welcome" | "home" | "photo" | "session" | "bar" | "practice" | "read" | "parents";
 
 const AVATARS = ["🦁", "🐯", "🐼", "🦊", "🐰", "🦉", "🐢", "🐱"];
 const FLAGS: Record<Lang, string> = { uz: "🇺🇿", ru: "🇷🇺", en: "🇬🇧" };
@@ -93,6 +95,18 @@ export default function App() {
 
         {profile && screen === "photo" && <PhotoFlow lang={profile.lang} grade={profile.grade} ai={ai} onHome={home} />}
         {profile && screen === "session" && <Session lang={profile.lang} grade={profile.grade} onHome={home} />}
+        {profile && screen === "read" && <ReadTogether lang={profile.lang} grade={profile.grade} onHome={home} />}
+        {profile && screen === "parents" && (
+          <ParentReport
+            lang={profile.lang}
+            grade={profile.grade}
+            onHome={home}
+            onPractice={(lesson) => {
+              setPractice(lesson);
+              setScreen("practice");
+            }}
+          />
+        )}
         {profile && screen === "bar" && (
           <div className="stack">
             <h1>🧩 {tr(profile.lang, "barTitle")}</h1>
@@ -226,13 +240,13 @@ function Home({
             <span>{tr(lang, "barDesc")}</span>
           </div>
         </button>
-        <div className="tile tile-read" aria-disabled>
-          <span className="badge">{tr(lang, "soon")}</span>
+        <button className="tile tile-read" onClick={() => onOpen("read")}>
           <span className="emoji">📖</span>
           <div>
             <b>{tr(lang, "readTitle")}</b>
+            <span>{tr(lang, "readDesc")}</span>
           </div>
-        </div>
+        </button>
       </div>
 
       {weak.length > 0 && (
@@ -247,6 +261,10 @@ function Home({
           </div>
         </section>
       )}
+
+      <button className="link-btn" onClick={() => onOpen("parents")}>
+        👨‍👩‍👧 {tr(lang, "parentTitle")}
+      </button>
     </div>
   );
 }
