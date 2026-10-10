@@ -69,6 +69,11 @@ const S = {
     ru: "Эту задачу я пока не понимаю. Попробуй написать её текстом или выбери другую.",
     en: "I couldn't understand this problem yet. Try typing it, or choose another one.",
   },
+  busy: {
+    uz: "Hozir so‘rovlar juda ko‘p. Bir daqiqadan keyin yana urinib ko‘r.",
+    ru: "Сейчас слишком много запросов. Попробуй ещё раз через минуту.",
+    en: "Too many requests right now. Try again in a minute.",
+  },
   error: {
     uz: "Nimadir xato ketdi. Yana bir bor urinib ko‘r.",
     ru: "Что-то пошло не так. Попробуй ещё раз.",
