@@ -43,7 +43,7 @@ export default function PhotoFlow({ lang, grade, ai, onHome }: { lang: Lang; gra
       });
       const data = await res.json();
       if (!res.ok || !data.readable || data.tasks.length === 0) {
-        setMessage(t(res.ok ? "notSupported" : "error"));
+        setMessage(t(res.ok ? "notSupported" : res.status === 429 ? "busy" : "error"));
         setStage({ s: "start" });
       } else if (data.tasks.length === 1) {
         setStage({ s: "confirm", text: data.tasks[0] });
@@ -67,7 +67,7 @@ export default function PhotoFlow({ lang, grade, ai, onHome }: { lang: Lang; gra
       });
       const data = await res.json();
       if (res.ok) return setStage({ s: "lesson", lesson: data.lesson });
-      setMessage(t(data.error === "ai_off" ? "aiOffWord" : data.error === "unsupported" ? "notSupported" : "error"));
+      setMessage(t(data.error === "ai_off" ? "aiOffWord" : data.error === "unsupported" ? "notSupported" : res.status === 429 ? "busy" : "error"));
       setStage({ s: "start" });
     } catch {
       setMessage(t("error"));

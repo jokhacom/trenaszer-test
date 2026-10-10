@@ -19,6 +19,7 @@ export async function POST(req: Request) {
     return Response.json(out);
   } catch (e) {
     console.error("read-task failed", e);
-    return Response.json({ error: e instanceof AiError ? e.message : "ai_error" }, { status: 502 });
+    const error = e instanceof AiError ? e.message : "ai_error";
+    return Response.json({ error }, { status: error === "limit" ? 429 : 502 });
   }
 }

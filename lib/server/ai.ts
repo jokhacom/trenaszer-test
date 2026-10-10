@@ -1,4 +1,4 @@
-// Claude API calls. Server-only: the API key never reaches the browser.
+// AI calls (Claude or Gemini). Server-only: the API key never reaches the browser.
 //
 // Cost rules (README → "Экономия на AI"):
 // 1. Each new task is sent to the AI once; its ladder is cached and reused.
@@ -6,21 +6,35 @@
 // 3. The model is set per job, so cheaper models can take simple jobs later.
 
 import Anthropic from "@anthropic-ai/sdk";
+import { ApiError, GoogleGenAI } from "@google/genai";
 import { evaluate } from "../expression";
 import { containsNumber } from "../problems";
 import type { Grade, Lang, Lesson, Step } from "../types";
 
-export const MODEL = process.env.CLAUDE_MODEL || "claude-sonnet-5-5";
+export const CLAUDE_MODEL = process.env.CLAUDE_MODEL || "claude-sonnet-5-5";
+export const GEMINI_MODEL = process.env.GEMINI_MODEL || "gemini-flash-latest";
+
+type Provider = "claude" | "gemini";
+
+/**
+ * Which AI the site uses: AI_PROVIDER if set, otherwise whichever key exists
+ * (Claude first). Without any key the site works with built-in tasks only.
+ */
+export function provider(): Provider | null {
+  const claude = Boolean(process.env.ANTHROPIC_API_KEY || process.env.ANTHROPIC_AUTH_TOKEN);
+  const gemini = Boolean(process.env.GEMINI_API_KEY);
+  const wanted = process.env.AI_PROVIDER?.toLowerCase();
+  if (wanted === "gemini" && gemini) return "gemini";
+  if (wanted === "claude" && claude) return "claude";
+  return claude ? "claude" : gemini ? "gemini" : null;
+}
 
 export function aiEnabled(): boolean {
-  return Boolean(process.env.ANTHROPIC_API_KEY || process.env.ANTHROPIC_AUTH_TOKEN);
+  return provider() !== null;
 }
 
-let client: Anthropic | null = null;
-function api(): Anthropic {
-  client ??= new Anthropic();
-  return client;
-}
+let claudeClient: Anthropic | null = null;
+let geminiClient: GoogleGenAI | null = null;
 
 const LANG_NAME: Record<Lang, string> = { uz: "Uzbek (Latin script)", ru: "Russian", en: "English" };
 
@@ -99,13 +113,28 @@ const LESSON_SCHEMA = {
   additionalProperties: false,
 };
 
-async function ask(
-  system: string,
-  content: Anthropic.Beta.BetaContentBlockParam[],
-  schema: Record<string, unknown>,
-): Promise<unknown> {
-  const response = await api().beta.messages.create({
-    model: MODEL,
+interface Input {
+  image?: { data: string; mediaType: "image/jpeg" | "image/png" | "image/webp" };
+  text: string;
+}
+
+async function ask(system: string, input: Input, schema: Record<string, unknown>): Promise<unknown> {
+  try {
+    return provider() === "gemini" ? await askGemini(system, input, schema) : await askClaude(system, input, schema);
+  } catch (e) {
+    if (e instanceof AiError) throw e;
+    if (e instanceof Anthropic.RateLimitError || (e instanceof ApiError && e.status === 429)) throw new AiError("limit");
+    throw e;
+  }
+}
+
+async function askClaude(system: string, input: Input, schema: Record<string, unknown>): Promise<unknown> {
+  claudeClient ??= new Anthropic();
+  const content: Anthropic.Beta.BetaContentBlockParam[] = [];
+  if (input.image) content.push({ type: "image", source: { type: "base64", media_type: input.image.mediaType, data: input.image.data } });
+  content.push({ type: "text", text: input.text });
+  const response = await claudeClient.beta.messages.create({
+    model: CLAUDE_MODEL,
     max_tokens: 16000,
     // Identical on every request, so it is read from the prompt cache.
     system: [{ type: "text", text: system, cache_control: { type: "ephemeral" } }],
@@ -121,15 +150,27 @@ async function ask(
   return JSON.parse(text.text);
 }
 
+async function askGemini(system: string, input: Input, schema: Record<string, unknown>): Promise<unknown> {
+  geminiClient ??= new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+  const parts: ({ inlineData: { mimeType: string; data: string } } | { text: string })[] = [];
+  if (input.image) parts.push({ inlineData: { mimeType: input.image.mediaType, data: input.image.data } });
+  parts.push({ text: input.text });
+  const response = await geminiClient.models.generateContent({
+    model: GEMINI_MODEL,
+    contents: [{ role: "user", parts }],
+    config: { systemInstruction: system, responseMimeType: "application/json", responseJsonSchema: schema },
+  });
+  const text = response.text;
+  if (!text) throw new AiError(response.promptFeedback?.blockReason ? "refused" : "empty");
+  return JSON.parse(text);
+}
+
 export class AiError extends Error {}
 
 export async function readTask(imageBase64: string, mediaType: "image/jpeg" | "image/png" | "image/webp"): Promise<{ readable: boolean; tasks: string[] }> {
   const out = (await ask(
     READ_SYSTEM,
-    [
-      { type: "image", source: { type: "base64", media_type: mediaType, data: imageBase64 } },
-      { type: "text", text: "Transcribe the tasks in this photo." },
-    ],
+    { image: { data: imageBase64, mediaType }, text: "Transcribe the tasks in this photo." },
     READ_SCHEMA,
   )) as { readable: boolean; tasks: string[] };
   return { readable: out.readable, tasks: (out.tasks ?? []).map((s) => s.trim()).filter(Boolean).slice(0, 10) };
@@ -159,7 +200,7 @@ export type LessonResult = { ok: true; lesson: Lesson } | { ok: false; reason: s
 export async function buildLesson(task: string, lang: Lang, grade: Grade): Promise<LessonResult> {
   const raw = (await ask(
     LESSON_SYSTEM,
-    [{ type: "text", text: `Output language: ${LANG_NAME[lang]}\nGrade: ${grade}\nTask:\n${task}` }],
+    { text: `Output language: ${LANG_NAME[lang]}\nGrade: ${grade}\nTask:\n${task}` },
     LESSON_SCHEMA,
   )) as RawLesson;
   return checkLesson(raw, lang);
