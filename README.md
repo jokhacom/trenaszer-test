@@ -343,5 +343,6 @@ npm run build      # сборка
 | `GEMINI_API_KEY` | Ключ Google Gemini (бесплатный уровень) |
 | `ANTHROPIC_API_KEY` | Ключ Claude |
 | `AI_PROVIDER` | `gemini` или `claude`, если добавлены оба ключа (по умолчанию Claude) |
-| `GEMINI_MODEL` | Модель Gemini, по умолчанию `gemini-flash-latest` |
+| `GEMINI_MODEL` | Модель Gemini для подсказок, по умолчанию `gemini-flash-latest` |
+| `GEMINI_READ_MODEL` | Быстрая модель Gemini для чтения фото, по умолчанию `gemini-flash-lite-latest` |
 | `CLAUDE_MODEL` | Модель Claude, по умолчанию `claude-sonnet-5-5` |

@@ -4,7 +4,8 @@ import { allow, clientIp, fingerprint, getLesson, putLesson } from "@/lib/server
 import { LANGS, type Grade, type Lang } from "@/lib/types";
 
 export const runtime = "nodejs";
-export const maxDuration = 60;
+// Above the AI time limits in lib/server/ai.ts, so a slow answer ends with a clear error code.
+export const maxDuration = 120;
 
 export async function POST(req: Request) {
   const body = (await req.json().catch(() => null)) as { text?: string; lang?: string; grade?: number; image?: string } | null;

@@ -13,6 +13,17 @@ import type { Grade, Lang, Lesson, Step } from "../types";
 
 export const CLAUDE_MODEL = process.env.CLAUDE_MODEL || "claude-sonnet-5-5";
 export const GEMINI_MODEL = process.env.GEMINI_MODEL || "gemini-flash-latest";
+/** Reading a photo is mostly transcription: a faster, lighter model is enough. */
+export const GEMINI_READ_MODEL = process.env.GEMINI_READ_MODEL || "gemini-flash-lite-latest";
+
+/** One AI job: reading a photo is quick and light, building a lesson needs more thought. */
+interface Job {
+  kind: "read" | "lesson";
+  /** Time limit for the whole job, below the hosting limit (maxDuration). */
+  budgetMs: number;
+}
+const READ_JOB: Job = { kind: "read", budgetMs: 50_000 };
+const LESSON_JOB: Job = { kind: "lesson", budgetMs: 100_000 };
 
 type Provider = "claude" | "gemini";
 
@@ -119,11 +130,14 @@ export interface Input {
   text: string;
 }
 
-async function ask(system: string, input: Input, schema: Record<string, unknown>): Promise<unknown> {
+async function ask(system: string, input: Input, schema: Record<string, unknown>, job: Job): Promise<unknown> {
   try {
-    return provider() === "gemini" ? await askGemini(system, input, schema) : await askClaude(system, input, schema);
+    return provider() === "gemini" ? await askGemini(system, input, schema, job) : await askClaude(system, input, schema, job);
   } catch (e) {
     if (e instanceof AiError) throw e;
+    if (e instanceof Anthropic.APIConnectionTimeoutError || (e instanceof Error && e.name === "AbortError")) {
+      throw new AiError("ai_error", `${provider()}-timeout`, e);
+    }
     if (e instanceof Anthropic.RateLimitError || (e instanceof ApiError && e.status === 429)) throw new AiError("limit");
     // A short code the child's parent can send us; the details stay in the server log.
     if (e instanceof ApiError) throw new AiError("ai_error", `gemini-${e.status}`, e);
@@ -133,7 +147,7 @@ async function ask(system: string, input: Input, schema: Record<string, unknown>
   }
 }
 
-async function askClaude(system: string, input: Input, schema: Record<string, unknown>): Promise<unknown> {
+async function askClaude(system: string, input: Input, schema: Record<string, unknown>, job: Job): Promise<unknown> {
   claudeClient ??= new Anthropic();
   const content: Anthropic.Beta.BetaContentBlockParam[] = [];
   if (input.image) content.push({ type: "image", source: { type: "base64", media_type: input.image.mediaType, data: input.image.data } });
@@ -144,40 +158,55 @@ async function askClaude(system: string, input: Input, schema: Record<string, un
     // Identical on every request, so it is read from the prompt cache.
     system: [{ type: "text", text: system, cache_control: { type: "ephemeral" } }],
     messages: [{ role: "user", content }],
-    output_config: { effort: "medium", format: { type: "json_schema", schema } },
+    output_config: { effort: job.kind === "read" ? "low" : "medium", format: { type: "json_schema", schema } },
     // Server-side fallback if the model declines a request.
     betas: ["server-side-fallback-2026-07-01"],
     fallbacks: "default",
-  });
+  }, { timeout: job.budgetMs, maxRetries: 0 });
   if (response.stop_reason === "refusal") throw new AiError("refused");
   const text = response.content.find((b): b is Anthropic.Beta.BetaTextBlock => b.type === "text");
   if (!text) throw new AiError("empty");
   return JSON.parse(text.text);
 }
 
-async function askGemini(system: string, input: Input, schema: Record<string, unknown>): Promise<unknown> {
+async function askGemini(system: string, input: Input, schema: Record<string, unknown>, job: Job): Promise<unknown> {
   geminiClient ??= new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+  const model = job.kind === "read" ? GEMINI_READ_MODEL : GEMINI_MODEL;
   const parts: ({ inlineData: { mimeType: string; data: string } } | { text: string })[] = [];
   if (input.image) parts.push({ inlineData: { mimeType: input.image.mediaType, data: input.image.data } });
   parts.push({ text: input.text });
   const fields = JSON.stringify(schema);
   // Settings differ between Gemini versions. Try the fastest setup first and
   // fall back to simpler ones if the model rejects an option (HTTP 400).
+  const thinkingLevel = job.kind === "read" ? ThinkingLevel.MINIMAL : ThinkingLevel.LOW;
   const configs = [
-    { systemInstruction: system, responseMimeType: "application/json", responseJsonSchema: schema, thinkingConfig: { thinkingLevel: ThinkingLevel.LOW } },
+    { systemInstruction: system, responseMimeType: "application/json", responseJsonSchema: schema, thinkingConfig: { thinkingLevel } },
     { systemInstruction: system, responseMimeType: "application/json", responseJsonSchema: schema },
     { systemInstruction: `${system}\n\nAnswer with JSON only, matching this JSON schema:\n${fields}`, responseMimeType: "application/json" },
   ];
+  // The whole job, including retries, must finish before the hosting cuts it off.
+  const deadline = Date.now() + job.budgetMs;
   for (let i = 0; ; i++) {
+    const left = deadline - Date.now();
+    if (left < 5_000) throw new AiError("ai_error", "gemini-timeout");
+    const started = Date.now();
     try {
-      const response = await geminiClient.models.generateContent({ model: GEMINI_MODEL, contents: [{ role: "user", parts }], config: configs[i] });
+      const response = await geminiClient.models.generateContent({
+        model,
+        contents: [{ role: "user", parts }],
+        config: { ...configs[i], abortSignal: AbortSignal.timeout(left) },
+      });
+      console.info(`Gemini ${model} ${job.kind} answered in ${Date.now() - started} ms (config ${i})`);
       const text = response.text;
       if (!text) throw new AiError(response.promptFeedback?.blockReason ? "refused" : "empty", "gemini-empty");
       return JSON.parse(text.replace(/^```(?:json)?\s*|\s*```$/g, ""));
     } catch (e) {
       if (e instanceof ApiError && e.status === 400 && i < configs.length - 1) {
-        console.warn(`Gemini rejected config ${i}, trying a simpler one:`, e.message);
+        console.warn(`Gemini ${model} rejected config ${i}, trying a simpler one:`, e.message);
         continue;
+      }
+      if (e instanceof Error && (e.name === "AbortError" || e.name === "TimeoutError")) {
+        throw new AiError("ai_error", "gemini-timeout", e);
       }
       throw e;
     }
@@ -200,6 +229,7 @@ export async function readTask(imageBase64: string, mediaType: "image/jpeg" | "i
     READ_SYSTEM,
     { image: { data: imageBase64, mediaType }, text: "Transcribe the tasks in this photo." },
     READ_SCHEMA,
+    READ_JOB,
   )) as { readable: boolean; tasks: string[] };
   return { readable: out.readable, tasks: (out.tasks ?? []).map((s) => s.trim()).filter(Boolean).slice(0, 10) };
 }
@@ -230,6 +260,7 @@ export async function buildLesson(task: string, lang: Lang, grade: Grade, image?
     LESSON_SYSTEM,
     { image, text: `Output language: ${LANG_NAME[lang]}\nGrade: ${grade}\nTask:\n${task}` },
     LESSON_SCHEMA,
+    LESSON_JOB,
   )) as RawLesson;
   return checkLesson(raw, lang);
 }

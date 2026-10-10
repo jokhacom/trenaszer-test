@@ -13,7 +13,7 @@ vi.mock("@google/genai", () => ({
       this.status = o.status;
     }
   },
-  ThinkingLevel: { LOW: "LOW" },
+  ThinkingLevel: { LOW: "LOW", MINIMAL: "MINIMAL" },
 }));
 
 const { buildLesson, provider, readTask } = await import("../lib/server/ai");
@@ -56,6 +56,10 @@ describe("Gemini requests", () => {
     expect(req.config.responseMimeType).toBe("application/json");
     expect(req.config.responseJsonSchema).toBeDefined();
     expect(req.config.systemInstruction).toContain("Transcribe");
+    // Photo reading uses the fast model with minimal thinking and a time limit.
+    expect(req.model).toBe("gemini-flash-lite-latest");
+    expect(req.config.thinkingConfig).toEqual({ thinkingLevel: "MINIMAL" });
+    expect(req.config.abortSignal).toBeInstanceOf(AbortSignal);
   });
 
   it("checks the lesson the same way as for Claude", async () => {
@@ -94,5 +98,13 @@ describe("Gemini requests", () => {
     env({ GEMINI_API_KEY: "g" });
     generateContent.mockRejectedValue(new ApiError({ message: "API key not valid", status: 403 }));
     await expect(readTask("AAAA", "image/png")).rejects.toMatchObject({ message: "ai_error", code: "gemini-403" });
+  });
+
+  it("turns a hung request into a timeout code", async () => {
+    env({ GEMINI_API_KEY: "g" });
+    const abort = new Error("aborted");
+    abort.name = "AbortError";
+    generateContent.mockRejectedValue(abort);
+    await expect(readTask("AAAA", "image/png")).rejects.toMatchObject({ code: "gemini-timeout" });
   });
 });
