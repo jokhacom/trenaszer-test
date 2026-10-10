@@ -11,9 +11,15 @@ import Mirodil from "./Mirodil";
 type Stage =
   | { s: "start" }
   | { s: "busy"; what: Key }
-  | { s: "pick"; tasks: string[] }
+  | { s: "pick" }
   | { s: "confirm"; text: string }
   | { s: "lesson"; lesson: Lesson };
+
+/** One question read from the photo: a short button title and the full text. */
+interface PhotoTask {
+  title: string;
+  text: string;
+}
 
 /** Photo (or typed) task → "Is this your problem?" → help ladder. */
 export default function PhotoFlow({ lang, grade, ai, onHome }: { lang: Lang; grade: Grade; ai: boolean; onHome: () => void }) {
@@ -22,12 +28,17 @@ export default function PhotoFlow({ lang, grade, ai, onHome }: { lang: Lang; gra
   const [photo, setPhoto] = useState<string | null>(null);
   const [typed, setTyped] = useState("");
   const [message, setMessage] = useState<string | null>(null);
+  // A photo can hold several questions; the child solves them one by one.
+  const [tasks, setTasks] = useState<PhotoTask[]>([]);
+  const [current, setCurrent] = useState<number | null>(null);
+  const [done, setDone] = useState<number[]>([]);
   const fileRef = useRef<HTMLInputElement>(null);
 
   /** POST with a time limit. Returns the JSON reply, or an error code to show the user. */
   async function post(url: string, body: unknown): Promise<{ ok: boolean; status: number; data: Record<string, unknown> }> {
     const ctrl = new AbortController();
-    const timer = setTimeout(() => ctrl.abort(), 90_000);
+    // A bit longer than the server's own AI time limits.
+    const timer = setTimeout(() => ctrl.abort(), 125_000);
     try {
       const res = await fetch(url, {
         method: "POST",
@@ -70,18 +81,23 @@ export default function PhotoFlow({ lang, grade, ai, onHome }: { lang: Lang; gra
       return;
     }
     setStage({ s: "busy", what: "reading" });
-    const r = await post("/api/read-task", { image: dataUrl });
-    const tasks = (r.data.tasks as string[] | undefined) ?? [];
+    const r = await post("/api/read-task", { image: dataUrl, lang });
+    const found = ((r.data.tasks as (PhotoTask | string)[] | undefined) ?? []).map((x) =>
+      typeof x === "string" ? { title: "", text: x } : x,
+    );
+    setTasks(found);
+    setDone([]);
+    setCurrent(null);
     if (!r.ok) {
       showError(r);
       setStage({ s: "start" });
-    } else if (!r.data.readable || tasks.length === 0) {
+    } else if (!r.data.readable || found.length === 0) {
       setMessage(t("notSupported"));
       setStage({ s: "start" });
-    } else if (tasks.length === 1) {
-      setStage({ s: "confirm", text: tasks[0] });
+    } else if (found.length === 1) {
+      setStage({ s: "confirm", text: found[0].text });
     } else {
-      setStage({ s: "pick", tasks });
+      setStage({ s: "pick" });
     }
   }
 
@@ -92,7 +108,8 @@ export default function PhotoFlow({ lang, grade, ai, onHome }: { lang: Lang; gra
     const r = await post("/api/lesson", { text, lang, grade, image: withPhoto ? (photo ?? undefined) : undefined });
     if (r.ok) return setStage({ s: "lesson", lesson: r.data.lesson as Lesson });
     showError(r);
-    setStage({ s: "start" });
+    // If the photo had several questions, let the child pick another one.
+    setStage(withPhoto && tasks.length > 1 ? { s: "pick" } : { s: "start" });
   }
 
   if (stage.s === "lesson") {
@@ -102,12 +119,19 @@ export default function PhotoFlow({ lang, grade, ai, onHome }: { lang: Lang; gra
         grade={grade}
         onDone={(r) => {
           if (stage.lesson.topic !== "other") recordResult(stage.lesson.topic as Topic, r.solved, r.maxLevel);
+          if (r.solved && current !== null) setDone((d) => [...d, current]);
         }}
         onNext={() => {
+          // More questions from the same photo: back to the list.
+          if (tasks.length > 1) {
+            setStage({ s: "pick" });
+            return;
+          }
           setPhoto(null);
           setTyped("");
           setStage({ s: "start" });
         }}
+        nextLabel={tasks.length > 1 ? t("nextQuestion") : undefined}
       />
     );
   }
@@ -117,7 +141,13 @@ export default function PhotoFlow({ lang, grade, ai, onHome }: { lang: Lang; gra
       <div className="mirodil-row">
         <Mirodil size={72} mood={stage.s === "busy" ? "think" : "happy"} />
         <div className="bubble">
-          {stage.s === "busy" ? t(stage.what) : stage.s === "pick" ? t("pickOne") : stage.s === "confirm" ? t("isThisIt") : message ?? t("photoDesc")}
+          {stage.s === "busy"
+            ? t(stage.what)
+            : stage.s === "pick"
+              ? message ?? t(done.length > 0 ? "pickNext" : "pickMany")
+              : stage.s === "confirm"
+                ? t("isThisIt")
+                : message ?? t("photoDesc")}
         </div>
       </div>
 
@@ -131,11 +161,26 @@ export default function PhotoFlow({ lang, grade, ai, onHome }: { lang: Lang; gra
 
       {stage.s === "pick" && (
         <div className="stack">
-          {stage.tasks.map((task, i) => (
-            <button key={i} className="diagram-choice" style={{ fontWeight: 800 }} onClick={() => setStage({ s: "confirm", text: task })}>
-              {task}
-            </button>
-          ))}
+          {tasks.map((task, i) => {
+            const solved = done.includes(i);
+            return (
+              <button
+                key={i}
+                className={`btn ${solved ? "btn-light" : "btn-blue"} btn-wide`}
+                style={{ justifyContent: "space-between", textAlign: "left", minHeight: 68 }}
+                onClick={() => {
+                  setCurrent(i);
+                  buildLesson(task.text, true);
+                }}
+              >
+                <span>
+                  {solved ? "✓ " : ""}
+                  {task.title || (task.text.length > 60 ? `${task.text.slice(0, 60)}…` : task.text)}
+                </span>
+                <span aria-hidden>→</span>
+              </button>
+            );
+          })}
         </div>
       )}
 
@@ -186,7 +231,10 @@ export default function PhotoFlow({ lang, grade, ai, onHome }: { lang: Lang; gra
               className="answer-row"
               onSubmit={(e) => {
                 e.preventDefault();
-                if (typed.trim()) buildLesson(typed, false);
+                if (typed.trim()) {
+                  setTasks([]);
+                  buildLesson(typed, false);
+                }
               }}
             >
               <input

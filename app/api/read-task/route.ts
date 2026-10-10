@@ -1,5 +1,6 @@
 import { aiEnabled, AiError, readTask } from "@/lib/server/ai";
 import { allow, clientIp } from "@/lib/server/store";
+import { LANGS, type Lang } from "@/lib/types";
 
 export const runtime = "nodejs";
 // Above the AI time limits in lib/server/ai.ts, so a slow answer ends with a clear error code.
@@ -11,12 +12,13 @@ export async function POST(req: Request) {
   if (!aiEnabled()) return Response.json({ error: "ai_off" }, { status: 503 });
   if (!allow(clientIp(req), "read", 30)) return Response.json({ error: "limit" }, { status: 429 });
 
-  const body = (await req.json().catch(() => null)) as { image?: string } | null;
+  const body = (await req.json().catch(() => null)) as { image?: string; lang?: string } | null;
+  const lang = LANGS.includes(body?.lang as Lang) ? (body!.lang as Lang) : "ru";
   const m = body?.image?.match(/^data:(image\/(?:jpeg|png|webp));base64,([A-Za-z0-9+/=]+)$/);
   if (!m || m[2].length > MAX_BASE64) return Response.json({ error: "bad_image" }, { status: 400 });
 
   try {
-    const out = await readTask(m[2], m[1] as "image/jpeg" | "image/png" | "image/webp");
+    const out = await readTask(m[2], m[1] as "image/jpeg" | "image/png" | "image/webp", lang);
     return Response.json(out);
   } catch (e) {
     console.error("read-task failed", e);

@@ -48,9 +48,9 @@ describe("AI provider choice", () => {
 describe("Gemini requests", () => {
   it("sends the photo with a JSON schema and reads the tasks", async () => {
     env({ GEMINI_API_KEY: "g" });
-    generateContent.mockResolvedValue({ text: JSON.stringify({ readable: true, tasks: [" 35 + 27 ", ""] }) });
+    generateContent.mockResolvedValue({ text: JSON.stringify({ readable: true, tasks: [{ title: " Пример ", text: " 35 + 27 " }, { title: "", text: "" }] }) });
     const out = await readTask("AAAA", "image/jpeg");
-    expect(out).toEqual({ readable: true, tasks: ["35 + 27"] });
+    expect(out).toEqual({ readable: true, tasks: [{ title: "Пример", text: "35 + 27" }] });
     const req = generateContent.mock.calls[0][0];
     expect(req.contents[0].parts[0]).toEqual({ inlineData: { mimeType: "image/jpeg", data: "AAAA" } });
     expect(req.config.responseMimeType).toBe("application/json");
@@ -89,7 +89,7 @@ describe("Gemini requests", () => {
       .mockRejectedValueOnce(new ApiError({ message: "thinking_level not supported", status: 400 }))
       .mockResolvedValueOnce({ text: '```json\n{"readable": true, "tasks": ["8 + 5"]}\n```' });
     const out = await readTask("AAAA", "image/png");
-    expect(out.tasks).toEqual(["8 + 5"]);
+    expect(out.tasks).toEqual([{ title: "", text: "8 + 5" }]);
     expect(generateContent.mock.calls[0][0].config.thinkingConfig).toBeDefined();
     expect(generateContent.mock.calls[1][0].config.thinkingConfig).toBeUndefined();
   });

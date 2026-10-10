@@ -58,7 +58,8 @@ const STYLE = `Writing rules for every text a child will read:
 
 const READ_SYSTEM = `You read photos of homework for primary-school children (grades 1–4) in Uzbekistan.
 Transcribe every school task you can see in the photo exactly as written, keeping its original language and numbers. Printed or handwritten text may be in Uzbek, Russian or English.
-- One array item per task. Keep the task number if there is one ("№5. ...").
+- One array item per task. "text" is the full task. Keep the task number if there is one ("№5. ...").
+- "title" is a very short name of the question for a button, 2–5 words, in the language given by the user (e.g. "Расстояние до Нукуса", "Nukusgacha masofa", "Distance to Nukus").
 - If one task asks several questions (for example, distances to several cities), make one item per question. Each item must be complete on its own: repeat the shared condition and write the numbers the child needs, including numbers that are shown only in a picture, diagram, number line or table (describe them in words, e.g. "Posts stand every 10 km; the post before Samarkand shows 150").
 - Do not solve anything and do not add hints.
 - If the photo is not a school task, or it is unreadable, set readable to false and return an empty list.
@@ -94,7 +95,15 @@ const READ_SCHEMA = {
   type: "object",
   properties: {
     readable: { type: "boolean" },
-    tasks: { type: "array", items: { type: "string" } },
+    tasks: {
+      type: "array",
+      items: {
+        type: "object",
+        properties: { title: { type: "string" }, text: { type: "string" } },
+        required: ["title", "text"],
+        additionalProperties: false,
+      },
+    },
   },
   required: ["readable", "tasks"],
   additionalProperties: false,
@@ -224,14 +233,31 @@ export class AiError extends Error {
   }
 }
 
-export async function readTask(imageBase64: string, mediaType: "image/jpeg" | "image/png" | "image/webp"): Promise<{ readable: boolean; tasks: string[] }> {
+export interface ReadTask {
+  /** Short name for a button: "Расстояние до Нукуса". */
+  title: string;
+  /** Full task text sent to the help ladder. */
+  text: string;
+}
+
+export async function readTask(
+  imageBase64: string,
+  mediaType: "image/jpeg" | "image/png" | "image/webp",
+  lang: Lang = "ru",
+): Promise<{ readable: boolean; tasks: ReadTask[] }> {
   const out = (await ask(
     READ_SYSTEM,
-    { image: { data: imageBase64, mediaType }, text: "Transcribe the tasks in this photo." },
+    { image: { data: imageBase64, mediaType }, text: `Transcribe the tasks in this photo. Language for titles: ${LANG_NAME[lang]}.` },
     READ_SCHEMA,
     READ_JOB,
-  )) as { readable: boolean; tasks: string[] };
-  return { readable: out.readable, tasks: (out.tasks ?? []).map((s) => s.trim()).filter(Boolean).slice(0, 10) };
+  )) as { readable: boolean; tasks: (ReadTask | string)[] };
+  const tasks = (out.tasks ?? [])
+    // Some models return plain strings despite the schema; accept both.
+    .map((x) => (typeof x === "string" ? { title: "", text: x } : x))
+    .map((x) => ({ title: (x.title ?? "").trim(), text: (x.text ?? "").trim() }))
+    .filter((x) => x.text)
+    .slice(0, 10);
+  return { readable: out.readable, tasks };
 }
 
 interface RawLesson {
