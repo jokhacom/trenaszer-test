@@ -46,6 +46,10 @@ const S = {
   send: { uz: "Yuborish", ru: "Отправить", en: "Send" },
   reading: { uz: "Masalani o‘qiyapman…", ru: "Читаю задачу…", en: "Reading the problem…" },
   thinking: { uz: "O‘ylayapman…", ru: "Думаю…", en: "Thinking…" },
+  reading2: { uz: "Rasmdagi sonlar va so‘zlarni ko‘ryapman…", ru: "Смотрю на числа и слова на фото…", en: "Looking at the numbers and words…" },
+  thinking2: { uz: "Shunga o‘xshash oson misol tanlayapman…", ru: "Подбираю похожий простой пример…", en: "Choosing a similar easy example…" },
+  thinking3: { uz: "Rasmlar chizyapman…", ru: "Рисую картинки…", en: "Drawing pictures…" },
+  almost: { uz: "Biroz qoldi, kutib tur…", ru: "Почти готово, ещё чуть-чуть…", en: "Almost ready, just a moment…" },
   isThisIt: { uz: "Bu sening masalangmi?", ru: "Это твоя задача?", en: "Is this your problem?" },
   pickMany: {
     uz: "Bu masalada bir nechta savol bor. Qaysi biridan boshlaymiz?",
