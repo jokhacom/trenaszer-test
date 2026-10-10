@@ -2,11 +2,12 @@
 
 import { useEffect, useRef, useState } from "react";
 import { GENTLE_WRONG, PRAISE, tr, type Key } from "@/lib/i18n";
-import { classifyInput, LEVELS, sameNumber, vary, WRONG_BEFORE_STEP_UP, type Level } from "@/lib/ladder";
+import { classifyInput, sameNumber, vary, WRONG_BEFORE_STEP_UP, type Level } from "@/lib/ladder";
 import { speak, stopSpeaking } from "@/lib/speech";
-import type { Grade, Lang, Lesson, Step } from "@/lib/types";
-import BarDiagram from "./BarDiagram";
+import type { Frame, Grade, Lang, Lesson, Step, Visual as V } from "@/lib/types";
 import Celebrate from "./Celebrate";
+import Slides from "./Slides";
+import Visual from "./Visual";
 import Listen from "./Listen";
 import Mirodil, { type Mood } from "./Mirodil";
 
@@ -15,6 +16,8 @@ interface Msg {
   text: string;
   title?: string;
   lines?: string[];
+  frames?: Frame[];
+  visual?: V;
   good?: boolean;
 }
 
@@ -22,7 +25,7 @@ type Pending = { kind: "question" } | { kind: "together"; i: number } | null;
 
 export interface LadderResult {
   solved: boolean;
-  /** Highest help level used: 0 = none … 4 = solved together. */
+  /** Highest help level used: 0 = none, 1 = example, 2 = question, 3 = solved together. */
   maxLevel: number;
 }
 
@@ -48,7 +51,10 @@ export default function Ladder({
 }) {
   const lang: Lang = lesson.lang;
   const t = (k: Key) => tr(lang, k);
-  const levels = LEVELS.filter((l) => l !== "example" || lesson.example.length > 0);
+  // When the child is stuck, a solved similar example with pictures comes first
+  // (Singapore: concrete → pictorial → abstract). Without an example, a hint.
+  const hasExample = (lesson.exampleFrames?.length ?? 0) > 0 || lesson.example.length > 0;
+  const levels: Level[] = ["try", hasExample ? "example" : "hint", "question", "together"];
 
   const [level, setLevel] = useState<Level>("try");
   const [msgs, setMsgs] = useState<Msg[]>([{ from: "mirodil", text: t("tryAlone") }]);
@@ -87,7 +93,7 @@ export default function Ladder({
   const say = (...m: Msg[]) => setMsgs((xs) => [...xs, ...m]);
 
   function stepPrompt(s: Step): Msg {
-    return { from: "mirodil", text: s.prompt };
+    return { from: "mirodil", text: s.prompt, visual: s.visual };
   }
 
   /** Moves one rung up the ladder. Never reveals the answer. */
@@ -108,13 +114,18 @@ export default function Ladder({
       say(...extra, { from: "mirodil", title: t(TITLE.hint), text: lesson.hint });
       setPending(null);
     } else if (next === "question") {
-      say(...extra, { from: "mirodil", title: t(TITLE.question), text: lesson.question.prompt });
+      say(...extra, { from: "mirodil", title: t(TITLE.question), text: lesson.question.prompt, visual: lesson.question.visual });
       setPending({ kind: "question" });
     } else if (next === "example") {
-      say(...extra, { from: "mirodil", title: t(TITLE.example), text: t("exampleNow"), lines: lesson.example });
+      say(
+        ...extra,
+        lesson.exampleFrames?.length
+          ? { from: "mirodil", title: t(TITLE.example), text: t("exampleIntro"), frames: lesson.exampleFrames }
+          : { from: "mirodil", title: t(TITLE.example), text: t("exampleNow"), lines: lesson.example },
+      );
       setPending(null);
     } else if (next === "together") {
-      say(...extra, { from: "mirodil", title: t(TITLE.together), text: lesson.together[0].prompt });
+      say(...extra, { from: "mirodil", title: t(TITLE.together), text: lesson.together[0].prompt, visual: lesson.together[0].visual });
       setPending({ kind: "together", i: 0 });
     }
   }
@@ -192,6 +203,7 @@ export default function Ladder({
   const step: Step | null =
     pending?.kind === "question" ? lesson.question : pending?.kind === "together" ? lesson.together[pending.i] : null;
   const isLong = lesson.task.length > 40;
+  const ownPicture: V | undefined = lesson.own ?? (lesson.bar ? { kind: "bar", spec: lesson.bar } : undefined);
 
   return (
     <div className="stack">
@@ -204,9 +216,7 @@ export default function Ladder({
           <Listen text={lesson.task} lang={lang} label />
         </div>
         <div className={`task-text${isLong ? " long" : ""}`}>{lesson.task}</div>
-        {lesson.bar && levelIndex >= levels.indexOf("hint") && levelIndex > 0 && (
-          <BarDiagram spec={lesson.bar} lang={lang} />
-        )}
+        {levelIndex > 0 && ownPicture && <Visual v={ownPicture} lang={lang} />}
       </div>
 
       <div className="chat" aria-live="polite">
@@ -221,6 +231,8 @@ export default function Ladder({
               <div className={`bubble${m.good ? " bubble-good" : ""}`}>
                 {m.title && <span className="bubble-title">{m.title}</span>}
                 {m.text}
+                {m.frames && <Slides frames={m.frames} lang={lang} autoSpeak={grade === 1} />}
+                {m.visual && <Visual v={m.visual} lang={lang} />}
                 {m.lines && (
                   <ul className="example-lines">
                     {m.lines.map((l, j) => (

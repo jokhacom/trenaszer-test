@@ -14,7 +14,7 @@ export interface TopicStat {
   tries: number;
   /** Solved without reaching the "solve together" step. */
   selfSolved: number;
-  /** Sum of the highest ladder level used (0 = no help … 4 = together). */
+  /** Sum of the highest ladder level used (0 = no help, 1 = example, 2 = question, 3 = together). */
   helpSum: number;
 }
 
@@ -51,7 +51,7 @@ export function recordResult(topic: Topic, solved: boolean, maxLevel: number) {
   const all = loadProgress();
   const s = all[topic] ?? { tries: 0, selfSolved: 0, helpSum: 0 };
   s.tries += 1;
-  if (solved && maxLevel < 4) s.selfSolved += 1;
+  if (solved && maxLevel < 3) s.selfSolved += 1;
   s.helpSum += maxLevel;
   all[topic] = s;
   write(PROGRESS_KEY, all);
@@ -63,7 +63,7 @@ export function weakTopics(grade: Grade): Topic[] {
   return TOPICS_BY_GRADE[grade].filter((t) => {
     const s = all[t];
     if (!s || s.tries < 2) return false;
-    return s.selfSolved / s.tries < 0.6 || s.helpSum / s.tries >= 2.5;
+    return s.selfSolved / s.tries < 0.6 || s.helpSum / s.tries >= 2;
   });
 }
 

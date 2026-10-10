@@ -2,15 +2,10 @@ import type { Lang } from "./types";
 
 /**
  * Help ladder levels. Each level gives more help than the one before, but no
- * level gives the answer to the child's own task.
+ * level gives the answer to the child's own task. "hint" replaces "example"
+ * when a task has no solved example (some AI-built lessons).
  */
-export const LEVELS = ["try", "hint", "question", "example", "together"] as const;
-export type Level = (typeof LEVELS)[number];
-
-export function nextLevel(l: Level): Level {
-  const i = LEVELS.indexOf(l);
-  return LEVELS[Math.min(i + 1, LEVELS.length - 1)];
-}
+export type Level = "try" | "example" | "hint" | "question" | "together";
 
 /** Wrong answers in a row on one level before the ladder steps up by itself. */
 export const WRONG_BEFORE_STEP_UP = 2;
