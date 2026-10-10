@@ -6,7 +6,7 @@
 // 3. The model is set per job, so cheaper models can take simple jobs later.
 
 import Anthropic from "@anthropic-ai/sdk";
-import { ApiError, GoogleGenAI } from "@google/genai";
+import { ApiError, GoogleGenAI, ThinkingLevel } from "@google/genai";
 import { evaluate } from "../expression";
 import { containsNumber } from "../problems";
 import type { Grade, Lang, Lesson, Step } from "../types";
@@ -48,6 +48,7 @@ const STYLE = `Writing rules for every text a child will read:
 const READ_SYSTEM = `You read photos of homework for primary-school children (grades 1–4) in Uzbekistan.
 Transcribe every school task you can see in the photo exactly as written, keeping its original language and numbers. Printed or handwritten text may be in Uzbek, Russian or English.
 - One array item per task. Keep the task number if there is one ("№5. ...").
+- If one task asks several questions (for example, distances to several cities), make one item per question. Each item must be complete on its own: repeat the shared condition and write the numbers the child needs, including numbers that are shown only in a picture, diagram, number line or table (describe them in words, e.g. "Posts stand every 10 km; the post before Samarkand shows 150").
 - Do not solve anything and do not add hints.
 - If the photo is not a school task, or it is unreadable, set readable to false and return an empty list.
 ${STYLE}`;
@@ -55,7 +56,7 @@ ${STYLE}`;
 const LESSON_SYSTEM = `You are Mirodil, a patient tutor for primary-school children (grades 1–4) in Uzbekistan.
 The product's main rule: the AI never does the homework for the child. It never gives the answer to the child's own task — not in a hint, not in a question, not in an example. The child must find the answer.
 
-You receive one task. Build a help ladder for it. The app shows the steps one by one, only when the child asks for help:
+You receive one task, sometimes with a photo of the textbook page. Use the photo to read numbers from pictures, diagrams, number lines and tables. Build a help ladder for it. The app shows the steps one by one, only when the child asks for help:
 1. hint — a direction: where to look, what to start with. Do not contain the answer.
 2. question — one leading question the child answers with a number. "expect" is the number the child should give. The prompt must not contain the final answer, and "expect" must not be the final answer.
 3. example — a similar but SIMPLER task, with DIFFERENT numbers, solved in full, line by line (3–6 short lines). The first line names it as a similar example. Its numbers and its result must differ from the child's task and from its answer.
@@ -113,7 +114,7 @@ const LESSON_SCHEMA = {
   additionalProperties: false,
 };
 
-interface Input {
+export interface Input {
   image?: { data: string; mediaType: "image/jpeg" | "image/png" | "image/webp" };
   text: string;
 }
@@ -124,7 +125,11 @@ async function ask(system: string, input: Input, schema: Record<string, unknown>
   } catch (e) {
     if (e instanceof AiError) throw e;
     if (e instanceof Anthropic.RateLimitError || (e instanceof ApiError && e.status === 429)) throw new AiError("limit");
-    throw e;
+    // A short code the child's parent can send us; the details stay in the server log.
+    if (e instanceof ApiError) throw new AiError("ai_error", `gemini-${e.status}`, e);
+    if (e instanceof Anthropic.APIError) throw new AiError("ai_error", `claude-${e.status ?? "net"}`, e);
+    if (e instanceof SyntaxError) throw new AiError("ai_error", "bad-json", e);
+    throw new AiError("ai_error", "unknown", e);
   }
 }
 
@@ -155,17 +160,40 @@ async function askGemini(system: string, input: Input, schema: Record<string, un
   const parts: ({ inlineData: { mimeType: string; data: string } } | { text: string })[] = [];
   if (input.image) parts.push({ inlineData: { mimeType: input.image.mediaType, data: input.image.data } });
   parts.push({ text: input.text });
-  const response = await geminiClient.models.generateContent({
-    model: GEMINI_MODEL,
-    contents: [{ role: "user", parts }],
-    config: { systemInstruction: system, responseMimeType: "application/json", responseJsonSchema: schema },
-  });
-  const text = response.text;
-  if (!text) throw new AiError(response.promptFeedback?.blockReason ? "refused" : "empty");
-  return JSON.parse(text);
+  const fields = JSON.stringify(schema);
+  // Settings differ between Gemini versions. Try the fastest setup first and
+  // fall back to simpler ones if the model rejects an option (HTTP 400).
+  const configs = [
+    { systemInstruction: system, responseMimeType: "application/json", responseJsonSchema: schema, thinkingConfig: { thinkingLevel: ThinkingLevel.LOW } },
+    { systemInstruction: system, responseMimeType: "application/json", responseJsonSchema: schema },
+    { systemInstruction: `${system}\n\nAnswer with JSON only, matching this JSON schema:\n${fields}`, responseMimeType: "application/json" },
+  ];
+  for (let i = 0; ; i++) {
+    try {
+      const response = await geminiClient.models.generateContent({ model: GEMINI_MODEL, contents: [{ role: "user", parts }], config: configs[i] });
+      const text = response.text;
+      if (!text) throw new AiError(response.promptFeedback?.blockReason ? "refused" : "empty", "gemini-empty");
+      return JSON.parse(text.replace(/^```(?:json)?\s*|\s*```$/g, ""));
+    } catch (e) {
+      if (e instanceof ApiError && e.status === 400 && i < configs.length - 1) {
+        console.warn(`Gemini rejected config ${i}, trying a simpler one:`, e.message);
+        continue;
+      }
+      throw e;
+    }
+  }
 }
 
-export class AiError extends Error {}
+export class AiError extends Error {
+  constructor(
+    message: string,
+    /** Short code shown to the user, e.g. "gemini-403". */
+    readonly code?: string,
+    cause?: unknown,
+  ) {
+    super(message, { cause });
+  }
+}
 
 export async function readTask(imageBase64: string, mediaType: "image/jpeg" | "image/png" | "image/webp"): Promise<{ readable: boolean; tasks: string[] }> {
   const out = (await ask(
@@ -197,10 +225,10 @@ const GENERIC_HINT: Record<Lang, string> = {
 
 export type LessonResult = { ok: true; lesson: Lesson } | { ok: false; reason: string };
 
-export async function buildLesson(task: string, lang: Lang, grade: Grade): Promise<LessonResult> {
+export async function buildLesson(task: string, lang: Lang, grade: Grade, image?: Input["image"]): Promise<LessonResult> {
   const raw = (await ask(
     LESSON_SYSTEM,
-    { text: `Output language: ${LANG_NAME[lang]}\nGrade: ${grade}\nTask:\n${task}` },
+    { image, text: `Output language: ${LANG_NAME[lang]}\nGrade: ${grade}\nTask:\n${task}` },
     LESSON_SCHEMA,
   )) as RawLesson;
   return checkLesson(raw, lang);

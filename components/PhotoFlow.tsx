@@ -24,55 +24,75 @@ export default function PhotoFlow({ lang, grade, ai, onHome }: { lang: Lang; gra
   const [message, setMessage] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
 
-  async function onFile(file: File | undefined) {
-    if (!file) return;
-    setMessage(null);
+  /** POST with a time limit. Returns the JSON reply, or an error code to show the user. */
+  async function post(url: string, body: unknown): Promise<{ ok: boolean; status: number; data: Record<string, unknown> }> {
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), 90_000);
     try {
-      const dataUrl = await shrinkPhoto(file);
-      setPhoto(dataUrl);
-      if (!ai) {
-        setMessage(t("aiOff"));
-        setStage({ s: "start" });
-        return;
-      }
-      setStage({ s: "busy", what: "reading" });
-      const res = await fetch("/api/read-task", {
+      const res = await fetch(url, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ image: dataUrl }),
+        body: JSON.stringify(body),
+        signal: ctrl.signal,
       });
-      const data = await res.json();
-      if (!res.ok || !data.readable || data.tasks.length === 0) {
-        setMessage(t(res.ok ? "notSupported" : res.status === 429 ? "busy" : "error"));
-        setStage({ s: "start" });
-      } else if (data.tasks.length === 1) {
-        setStage({ s: "confirm", text: data.tasks[0] });
-      } else {
-        setStage({ s: "pick", tasks: data.tasks });
-      }
-    } catch {
-      setMessage(t("error"));
-      setStage({ s: "start" });
+      // A timeout on the hosting side returns an HTML page, not JSON.
+      const data = (await res.json().catch(() => ({ error: "ai_error", code: `http-${res.status}` }))) as Record<string, unknown>;
+      return { ok: res.ok, status: res.status, data };
+    } catch (e) {
+      return { ok: false, status: 0, data: { error: "ai_error", code: e instanceof DOMException && e.name === "AbortError" ? "timeout" : "network" } };
+    } finally {
+      clearTimeout(timer);
     }
   }
 
-  async function buildLesson(text: string) {
+  function showError(r: { status: number; data: Record<string, unknown> }) {
+    const e = r.data.error;
+    if (e === "ai_off") return setMessage(t("aiOffWord"));
+    if (e === "unsupported") return setMessage(t("notSupported"));
+    if (r.status === 429 || e === "limit") return setMessage(t("busy"));
+    setMessage(`${t("error")} (${t("errorCode")}: ${String(r.data.code ?? r.status)})`);
+  }
+
+  async function onFile(file: File | undefined) {
+    if (!file) return;
+    setMessage(null);
+    let dataUrl: string;
+    try {
+      dataUrl = await shrinkPhoto(file);
+    } catch {
+      setMessage(`${t("error")} (${t("errorCode")}: photo)`);
+      return;
+    }
+    setPhoto(dataUrl);
+    if (!ai) {
+      setMessage(t("aiOff"));
+      setStage({ s: "start" });
+      return;
+    }
+    setStage({ s: "busy", what: "reading" });
+    const r = await post("/api/read-task", { image: dataUrl });
+    const tasks = (r.data.tasks as string[] | undefined) ?? [];
+    if (!r.ok) {
+      showError(r);
+      setStage({ s: "start" });
+    } else if (!r.data.readable || tasks.length === 0) {
+      setMessage(t("notSupported"));
+      setStage({ s: "start" });
+    } else if (tasks.length === 1) {
+      setStage({ s: "confirm", text: tasks[0] });
+    } else {
+      setStage({ s: "pick", tasks });
+    }
+  }
+
+  async function buildLesson(text: string, withPhoto: boolean) {
     setMessage(null);
     setStage({ s: "busy", what: "thinking" });
-    try {
-      const res = await fetch("/api/lesson", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ text, lang, grade }),
-      });
-      const data = await res.json();
-      if (res.ok) return setStage({ s: "lesson", lesson: data.lesson });
-      setMessage(t(data.error === "ai_off" ? "aiOffWord" : data.error === "unsupported" ? "notSupported" : res.status === 429 ? "busy" : "error"));
-      setStage({ s: "start" });
-    } catch {
-      setMessage(t("error"));
-      setStage({ s: "start" });
-    }
+    // The photo goes along so the AI can read numbers from pictures and diagrams.
+    const r = await post("/api/lesson", { text, lang, grade, image: withPhoto ? (photo ?? undefined) : undefined });
+    if (r.ok) return setStage({ s: "lesson", lesson: r.data.lesson as Lesson });
+    showError(r);
+    setStage({ s: "start" });
   }
 
   if (stage.s === "lesson") {
@@ -128,7 +148,7 @@ export default function PhotoFlow({ lang, grade, ai, onHome }: { lang: Lang; gra
             aria-label={t("isThisIt")}
           />
           <div className="row">
-            <button className="btn btn-primary" style={{ flex: 1 }} onClick={() => buildLesson(stage.text)} disabled={!stage.text.trim()}>
+            <button className="btn btn-primary" style={{ flex: 1 }} onClick={() => buildLesson(stage.text, true)} disabled={!stage.text.trim()}>
               ✅ {t("yes")}
             </button>
             <button className="btn btn-light" style={{ flex: 1 }} onClick={() => fileRef.current?.click()}>
@@ -166,7 +186,7 @@ export default function PhotoFlow({ lang, grade, ai, onHome }: { lang: Lang; gra
               className="answer-row"
               onSubmit={(e) => {
                 e.preventDefault();
-                if (typed.trim()) buildLesson(typed);
+                if (typed.trim()) buildLesson(typed, false);
               }}
             >
               <input

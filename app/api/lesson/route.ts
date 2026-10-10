@@ -1,5 +1,5 @@
 import { lessonFromExample } from "@/lib/problems";
-import { aiEnabled, AiError, buildLesson } from "@/lib/server/ai";
+import { aiEnabled, AiError, buildLesson, type Input } from "@/lib/server/ai";
 import { allow, clientIp, fingerprint, getLesson, putLesson } from "@/lib/server/store";
 import { LANGS, type Grade, type Lang } from "@/lib/types";
 
@@ -7,7 +7,7 @@ export const runtime = "nodejs";
 export const maxDuration = 60;
 
 export async function POST(req: Request) {
-  const body = (await req.json().catch(() => null)) as { text?: string; lang?: string; grade?: number } | null;
+  const body = (await req.json().catch(() => null)) as { text?: string; lang?: string; grade?: number; image?: string } | null;
   const text = body?.text?.trim().slice(0, 1500);
   const lang = LANGS.includes(body?.lang as Lang) ? (body!.lang as Lang) : null;
   const grade = [1, 2, 3, 4].includes(Number(body?.grade)) ? (Number(body!.grade) as Grade) : null;
@@ -26,13 +26,17 @@ export async function POST(req: Request) {
   if (!aiEnabled()) return Response.json({ error: "ai_off" }, { status: 503 });
   if (!allow(clientIp(req), "lesson", 30)) return Response.json({ error: "limit" }, { status: 429 });
   try {
-    const result = await buildLesson(text, lang, grade);
+    // A photo of the page helps with tasks whose numbers are in a picture or diagram.
+    const m = body?.image?.match(/^data:(image\/(?:jpeg|png|webp));base64,([A-Za-z0-9+/=]+)$/);
+    const image = m && m[2].length <= 7_000_000 ? { data: m[2], mediaType: m[1] as NonNullable<Input["image"]>["mediaType"] } : undefined;
+    const result = await buildLesson(text, lang, grade, image);
     if (!result.ok) return Response.json({ error: "unsupported", reason: result.reason }, { status: 422 });
     putLesson(key, result.lesson);
     return Response.json({ lesson: result.lesson });
   } catch (e) {
     console.error("lesson failed", e);
     const error = e instanceof AiError ? e.message : "ai_error";
-    return Response.json({ error }, { status: error === "limit" ? 429 : 502 });
+    const code = e instanceof AiError ? e.code : "unknown";
+    return Response.json({ error, code }, { status: error === "limit" ? 429 : 502 });
   }
 }
