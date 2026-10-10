@@ -5,12 +5,19 @@ vi.mock("@google/genai", () => ({
   GoogleGenAI: class {
     models = { generateContent };
   },
+  // Same shape as the real SDK class: new ApiError({ message, status }).
   ApiError: class extends Error {
-    status = 0;
+    status: number;
+    constructor(o: { message: string; status: number }) {
+      super(o.message);
+      this.status = o.status;
+    }
   },
+  ThinkingLevel: { LOW: "LOW" },
 }));
 
 const { buildLesson, provider, readTask } = await import("../lib/server/ai");
+const { ApiError } = await import("@google/genai");
 
 const KEYS = ["ANTHROPIC_API_KEY", "ANTHROPIC_AUTH_TOKEN", "GEMINI_API_KEY", "AI_PROVIDER"];
 function env(vars: Record<string, string>) {
@@ -70,5 +77,22 @@ describe("Gemini requests", () => {
     const r = await buildLesson("12 + 5 + ничего", "ru", 2);
     expect(r.ok).toBe(true);
     if (r.ok) expect(r.lesson.hint).not.toContain("17");
+  });
+
+  it("falls back to simpler settings when Gemini rejects an option", async () => {
+    env({ GEMINI_API_KEY: "g" });
+    generateContent
+      .mockRejectedValueOnce(new ApiError({ message: "thinking_level not supported", status: 400 }))
+      .mockResolvedValueOnce({ text: '```json\n{"readable": true, "tasks": ["8 + 5"]}\n```' });
+    const out = await readTask("AAAA", "image/png");
+    expect(out.tasks).toEqual(["8 + 5"]);
+    expect(generateContent.mock.calls[0][0].config.thinkingConfig).toBeDefined();
+    expect(generateContent.mock.calls[1][0].config.thinkingConfig).toBeUndefined();
+  });
+
+  it("reports a short error code", async () => {
+    env({ GEMINI_API_KEY: "g" });
+    generateContent.mockRejectedValue(new ApiError({ message: "API key not valid", status: 403 }));
+    await expect(readTask("AAAA", "image/png")).rejects.toMatchObject({ message: "ai_error", code: "gemini-403" });
   });
 });

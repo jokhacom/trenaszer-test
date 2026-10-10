@@ -74,6 +74,7 @@ const S = {
     ru: "Сейчас слишком много запросов. Попробуй ещё раз через минуту.",
     en: "Too many requests right now. Try again in a minute.",
   },
+  errorCode: { uz: "xato kodi", ru: "код ошибки", en: "error code" },
   error: {
     uz: "Nimadir xato ketdi. Yana bir bor urinib ko‘r.",
     ru: "Что-то пошло не так. Попробуй ещё раз.",
