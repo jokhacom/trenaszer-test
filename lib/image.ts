@@ -1,8 +1,8 @@
 // Shrinks a phone photo before upload: smaller request, fewer AI tokens.
-// 1280 px on the long side is still enough to read a textbook page, and the
-// smaller upload makes the AI answer noticeably faster.
+// 1600 px on the long side keeps small textbook print readable (also on a
+// sideways photo) while the upload stays small.
 
-const MAX_SIDE = 1280;
+const MAX_SIDE = 1600;
 
 export async function shrinkPhoto(file: File): Promise<string> {
   const bitmap = await createImageBitmap(file);

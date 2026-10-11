@@ -79,7 +79,8 @@ export default function PhotoFlow({ lang, grade, ai, onHome }: { lang: Lang; gra
   function showError(r: { status: number; data: Record<string, unknown> }) {
     const e = r.data.error;
     if (e === "ai_off") return setMessage(t("aiOffWord"));
-    if (e === "unsupported") return setMessage(t("notSupported"));
+    // The short code (why the AI declined) helps us find what to improve.
+    if (e === "unsupported") return setMessage(`${t("notSupported")} (${t("errorCode")}: ${String(r.data.reason ?? "unsupported").slice(0, 40)})`);
     if (r.status === 429 || e === "limit") return setMessage(t("busy"));
     setMessage(`${t("error")} (${t("errorCode")}: ${String(r.data.code ?? r.status)})`);
   }
@@ -113,7 +114,7 @@ export default function PhotoFlow({ lang, grade, ai, onHome }: { lang: Lang; gra
       showError(r);
       setStage({ s: "start" });
     } else if (!r.data.readable || found.length === 0) {
-      setMessage(t("notSupported"));
+      setMessage(`${t("notSupported")} (${t("errorCode")}: unreadable)`);
       setStage({ s: "start" });
     } else {
       const first = found[0].text;
@@ -189,14 +190,18 @@ export default function PhotoFlow({ lang, grade, ai, onHome }: { lang: Lang; gra
       )}
 
       {stage.s === "pick" && (
-        <div className="stack">
+        // Many short items (one per gap in a spelling exercise) fit better in a grid.
+        <div
+          className={tasks.length > 6 ? "pick-grid" : "stack"}
+          style={tasks.length > 6 ? { gridTemplateColumns: "repeat(auto-fill, minmax(150px, 1fr))" } : undefined}
+        >
           {tasks.map((task, i) => {
             const solved = done.includes(i);
             return (
               <button
                 key={i}
                 className={`btn ${solved ? "btn-light" : "btn-blue"} btn-wide`}
-                style={{ justifyContent: "space-between", textAlign: "left", minHeight: 68 }}
+                style={{ justifyContent: "space-between", textAlign: "left", minHeight: tasks.length > 6 ? 56 : 68 }}
                 onClick={() => {
                   setCurrent(i);
                   buildLesson(task.text, true);

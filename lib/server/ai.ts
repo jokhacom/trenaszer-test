@@ -22,8 +22,12 @@ interface Job {
   kind: "read" | "lesson";
   /** Time limit for the whole job, below the hosting limit (maxDuration). */
   budgetMs: number;
+  /** Use the smarter model and think more: a second try after a quick read found nothing. */
+  strong?: boolean;
 }
 const READ_JOB: Job = { kind: "read", budgetMs: 50_000 };
+// Together with READ_JOB it stays below the hosting limit (maxDuration = 120 s).
+const READ_AGAIN_JOB: Job = { kind: "read", budgetMs: 60_000, strong: true };
 const LESSON_JOB: Job = { kind: "lesson", budgetMs: 100_000 };
 
 type Provider = "claude" | "gemini";
@@ -59,9 +63,12 @@ const STYLE = `Writing rules for every text a child will read:
 
 const READ_SYSTEM = `You read photos of homework for primary-school children (grades 1–4) in Uzbekistan.
 Transcribe every school task you can see in the photo exactly as written, keeping its original language and numbers. Printed or handwritten text may be in Uzbek, Russian or English.
+The photo may be turned sideways or upside down, slightly blurred, or have shadows: read it anyway. Only set readable to false when you really cannot read the text.
+Transcribe the printed task only. Ignore pencil or pen marks a child has already made (circled or underlined choices, written answers): keep every printed choice, e.g. "су(б, бб)оту", never the choice the child marked.
 - One array item per task. "text" is the full task. Keep the task number if there is one ("№5. ...").
 - "title" is a very short name of the question for a button, 2–5 words, in the language given by the user (e.g. "Расстояние до Нукуса", "Nukusgacha masofa", "Distance to Nukus").
 - If one task asks several questions (for example, distances to several cities), make one item per question. Each item must be complete on its own: repeat the shared condition and write the numbers the child needs, including numbers that are shown only in a picture, diagram, number line or table (describe them in words, e.g. "Posts stand every 10 km; the post before Samarkand shows 150").
+- An exercise with many gaps or choices (insert a letter, choose the right spelling, put a word in the right form): make one item per gap, so each item has exactly one answer. Text: the instruction, the word with the gap, then its sentence for context ("Выбери правильный вариант: су(б, бб)оту. Предложение: В су(б, бб)оту наша гру(п, пп)а пошла в парк."). Title: the word with the gap ("су(б, бб)оту").
 - Do not solve anything and do not add hints.
 - If the photo is not a school task, or it is unreadable, set readable to false and return an empty list.
 ${STYLE}`;
@@ -75,6 +82,8 @@ First decide how the child will give the final answer (answer_kind):
 - "number": a single number (most maths). Fill answer_number and solution_expression.
 - "choice": the child picks one of 2–4 short options (choose a word, a letter, true/false, which animal…). Fill choices and correct_choice (0-based). Shuffle the options; the right one must not always be first.
 - "text": the child writes a short word or phrase (a missing letter, a word in the right form, an English word). Fill accepted with every correct spelling (2–5 variants if several are right).
+For spelling with a choice of letters ("су(б, бб)оту"), use "choice" with the full words as options ("суботу", "субботу"), never single letters. Never write the correct word in the hint, question, steps or pictures; explain the rule on a different word.
+If the task has several gaps, teach the first one only and set the answer for it.
 Fill the fields of the other kinds with empty values.
 
 Build a help ladder. The app shows the steps one by one, only when the child asks for help:
@@ -99,7 +108,7 @@ Also return:
 
 Set supported to false (and fill the other fields with empty values) when:
 - it is not a school task for grades 1–4, or it is unsafe or unrelated to studies;
-- the answer cannot be checked as one number, one choice or a short word (drawings, essays, several answers at once, opinions);
+- the answer cannot be checked as one number, one choice or a short word (drawings, essays, opinions);
 - the task text is unclear.
 In "reason" explain briefly in the output language.
 
@@ -219,7 +228,7 @@ async function askClaude(system: string, input: Input, schema: Record<string, un
     // Identical on every request, so it is read from the prompt cache.
     system: [{ type: "text", text: system, cache_control: { type: "ephemeral" } }],
     messages: [{ role: "user", content }],
-    output_config: { effort: job.kind === "read" ? "low" : "medium", format: { type: "json_schema", schema } },
+    output_config: { effort: job.kind === "read" && !job.strong ? "low" : "medium", format: { type: "json_schema", schema } },
     // Server-side fallback if the model declines a request.
     betas: ["server-side-fallback-2026-07-01"],
     fallbacks: "default",
@@ -234,7 +243,8 @@ async function askGemini(system: string, input: Input, schema: Record<string, un
   geminiClient ??= new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
   // When Google's model is overloaded (503) or out of free quota (429), the
   // other model usually still answers: the lighter one is faster, the main one smarter.
-  const models = job.kind === "read" ? [GEMINI_READ_MODEL, GEMINI_MODEL] : [GEMINI_MODEL, GEMINI_READ_MODEL];
+  const quick = job.kind === "read" && !job.strong;
+  const models = quick ? [GEMINI_READ_MODEL, GEMINI_MODEL] : [GEMINI_MODEL, GEMINI_READ_MODEL];
   let m = 0;
   const parts: ({ inlineData: { mimeType: string; data: string } } | { text: string })[] = [];
   if (input.image) parts.push({ inlineData: { mimeType: input.image.mediaType, data: input.image.data } });
@@ -242,7 +252,7 @@ async function askGemini(system: string, input: Input, schema: Record<string, un
   const fields = JSON.stringify(schema);
   // Settings differ between Gemini versions. Try the fastest setup first and
   // fall back to simpler ones if the model rejects an option (HTTP 400).
-  const thinkingLevel = job.kind === "read" ? ThinkingLevel.MINIMAL : ThinkingLevel.LOW;
+  const thinkingLevel = quick ? ThinkingLevel.MINIMAL : ThinkingLevel.LOW;
   const configs = [
     { systemInstruction: system, responseMimeType: "application/json", responseJsonSchema: schema, thinkingConfig: { thinkingLevel } },
     { systemInstruction: system, responseMimeType: "application/json", responseJsonSchema: schema },
@@ -313,13 +323,27 @@ export async function readTask(
     READ_SCHEMA,
     READ_JOB,
   )) as { readable: boolean; tasks: (ReadTask | string)[] };
+  const first = cleanTasks(out);
+  if (first.readable && first.tasks.length > 0) return first;
+  // The quick read found nothing (a sideways photo, small print): one more careful try.
+  return cleanTasks(
+    (await ask(
+      READ_SYSTEM,
+      { image: { data: imageBase64, mediaType }, text: `Look carefully, the photo may be rotated. Transcribe the tasks in this photo. Language for titles: ${LANG_NAME[lang]}.` },
+      READ_SCHEMA,
+      READ_AGAIN_JOB,
+    )) as { readable: boolean; tasks: (ReadTask | string)[] },
+  );
+}
+
+function cleanTasks(out: { readable: boolean; tasks: (ReadTask | string)[] }): { readable: boolean; tasks: ReadTask[] } {
   const tasks = (out.tasks ?? [])
     // Some models return plain strings despite the schema; accept both.
     .map((x) => (typeof x === "string" ? { title: "", text: x } : x))
     .map((x) => ({ title: (x.title ?? "").trim(), text: (x.text ?? "").trim() }))
     .filter((x) => x.text)
-    .slice(0, 10);
-  return { readable: out.readable, tasks };
+    .slice(0, 20);
+  return { readable: Boolean(out.readable), tasks };
 }
 
 interface RawStep {
