@@ -5,6 +5,8 @@ import { tr } from "@/lib/i18n";
 import { makeLesson, TOPIC_NAMES } from "@/lib/problems";
 import { activeDays, loadPhotoStat, loadProgress, loadReading, strongTopics, weakTopics } from "@/lib/progress";
 import type { Grade, Lang, Lesson, Topic } from "@/lib/types";
+import { loadSession } from "@/lib/cloud";
+import CloudCard from "./CloudCard";
 import Mirodil from "./Mirodil";
 
 interface Report {
@@ -38,15 +40,22 @@ export default function ParentReport({
   grade,
   onPractice,
   onHome,
+  cloud,
+  notice,
 }: {
   lang: Lang;
   grade: Grade;
+  /** Parents can log in and keep progress in the cloud. */
+  cloud: boolean;
+  /** A message after the login link brought the parent back. */
+  notice?: string | null;
   onPractice: (l: Lesson) => void;
   onHome: () => void;
 }) {
   const t = (k: Parameters<typeof tr>[1]) => tr(lang, k);
   const [r, setR] = useState<Report | null>(null);
-  useEffect(() => setR(build(grade)), [grade]);
+  // Rebuilt after the cloud copy arrives (the notice comes with it).
+  useEffect(() => setR(build(grade)), [grade, notice]);
   if (!r) return null;
   const empty = r.self + r.helped + r.stories === 0;
   const names = (ts: Topic[]) => ts.map((x) => TOPIC_NAMES[x][lang]).join(", ");
@@ -108,8 +117,10 @@ export default function ParentReport({
         </>
       )}
 
+      {cloud && <CloudCard lang={lang} notice={notice} onSynced={() => setR(build(grade))} />}
+
       <p className="muted" style={{ margin: 0, fontSize: 15 }}>
-        🔒 {t("parentPrivacy")}
+        🔒 {t(cloud && loadSession() ? "parentPrivacyCloud" : "parentPrivacy")}
       </p>
       <button className="btn btn-light" onClick={onHome}>
         ← {t("home")}

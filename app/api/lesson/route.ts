@@ -4,6 +4,10 @@ import { allow, clientIp, fingerprint, getLesson, putLesson } from "@/lib/server
 import { LANGS, type Grade, type Lang } from "@/lib/types";
 
 export const runtime = "nodejs";
+
+// Raise when the way lessons are built changes (prompt, pictures): saved
+// lessons of the old kind are then built again instead of reused.
+const LESSON_VERSION = "v2";
 // Above the AI time limits in lib/server/ai.ts, so a slow answer ends with a clear error code.
 export const maxDuration = 120;
 
@@ -21,7 +25,7 @@ export async function POST(req: Request) {
   if (local) return Response.json({ lesson: local });
 
   // 2. A task some child already sent: reuse the saved ladder.
-  const key = `${drill ? "drill|" : ""}${fingerprint(text, lang, grade)}`;
+  const key = `${LESSON_VERSION}|${drill ? "drill|" : ""}${fingerprint(text, lang, grade)}`;
   const cached = await getLesson(key);
   if (cached) return Response.json({ [drill ? "drill" : "lesson"]: cached, cached: true });
 

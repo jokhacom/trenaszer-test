@@ -59,6 +59,15 @@ export function migrate(s: Sql): Promise<void> {
         primary key (book_id, page, number)
       )`;
     await s`alter table book_tasks enable row level security`;
+    // A family's progress, saved after a parent logs in by email.
+    await s`
+      create table if not exists family_data (
+        user_id uuid primary key,
+        email text not null,
+        data jsonb not null,
+        updated_at timestamptz not null default now()
+      )`;
+    await s`alter table family_data enable row level security`;
   })().catch((e) => {
     ready = null; // try again on the next request
     throw e;

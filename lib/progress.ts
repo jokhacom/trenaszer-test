@@ -32,9 +32,18 @@ function read<T>(key: string): T | null {
   }
 }
 
+const listeners = new Set<() => void>();
+
+/** Called after progress is saved, e.g. to copy it to the cloud. */
+export function onSaved(fn: () => void): () => void {
+  listeners.add(fn);
+  return () => void listeners.delete(fn);
+}
+
 function write(key: string, value: unknown) {
   try {
     localStorage.setItem(key, JSON.stringify(value));
+    listeners.forEach((fn) => fn());
   } catch {
     // Private mode or storage is full: the app still works, progress just isn't kept.
   }
