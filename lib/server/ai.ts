@@ -198,16 +198,18 @@ const LESSON_SCHEMA = {
 
 export interface Input {
   image?: { data: string; mediaType: "image/jpeg" | "image/png" | "image/webp" };
+  /** A file already in Gemini's file store (a textbook PDF). Gemini only. */
+  file?: { uri: string; mimeType: string };
   text: string;
 }
 
-async function ask(system: string, input: Input, schema: Record<string, unknown>, job: Job): Promise<unknown> {
+async function ask(system: string, input: Input, schema: Record<string, unknown>, job: Job, use = provider()): Promise<unknown> {
   try {
-    return provider() === "gemini" ? await askGemini(system, input, schema, job) : await askClaude(system, input, schema, job);
+    return use === "gemini" ? await askGemini(system, input, schema, job) : await askClaude(system, input, schema, job);
   } catch (e) {
     if (e instanceof AiError) throw e;
     if (e instanceof Anthropic.APIConnectionTimeoutError || (e instanceof Error && e.name === "AbortError")) {
-      throw new AiError("ai_error", `${provider()}-timeout`, e);
+      throw new AiError("ai_error", `${use}-timeout`, e);
     }
     if (e instanceof Anthropic.RateLimitError || (e instanceof ApiError && e.status === 429)) throw new AiError("limit");
     // A short code the child's parent can send us; the details stay in the server log.
@@ -247,8 +249,9 @@ async function askGemini(system: string, input: Input, schema: Record<string, un
   const quick = job.kind === "read" && !job.strong;
   const models = quick ? [GEMINI_READ_MODEL, GEMINI_MODEL] : [GEMINI_MODEL, GEMINI_READ_MODEL];
   let m = 0;
-  const parts: ({ inlineData: { mimeType: string; data: string } } | { text: string })[] = [];
+  const parts: ({ inlineData: { mimeType: string; data: string } } | { fileData: { fileUri: string; mimeType: string } } | { text: string })[] = [];
   if (input.image) parts.push({ inlineData: { mimeType: input.image.mediaType, data: input.image.data } });
+  if (input.file) parts.push({ fileData: { fileUri: input.file.uri, mimeType: input.file.mimeType } });
   parts.push({ text: input.text });
   const fields = JSON.stringify(schema);
   // Settings differ between Gemini versions. Try the fastest setup first and
@@ -643,4 +646,58 @@ export function checkDrill(raw: RawDrill, lang: Lang): DrillResult {
       items,
     },
   };
+}
+
+// ---- Textbooks: the PDF is kept in Gemini's file store and searched by page and number ----
+
+/** Textbooks need Gemini: it reads a whole PDF from its file store. */
+export const booksAiEnabled = () => Boolean(process.env.GEMINI_API_KEY);
+
+function gemini(): GoogleGenAI {
+  geminiClient ??= new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+  return geminiClient;
+}
+
+export interface AiFile {
+  name: string;
+  uri: string;
+  /** Gemini keeps uploaded files for 48 hours; after that the PDF is sent again. */
+  expires: Date;
+  ready: boolean;
+}
+
+function toAiFile(f: { name?: string; uri?: string; expirationTime?: string; state?: string }): AiFile {
+  if (f.state === "FAILED") throw new AiError("ai_error", "book-file-failed");
+  if (!f.name || !f.uri) throw new AiError("ai_error", "book-file-missing");
+  return { name: f.name, uri: f.uri, expires: new Date(f.expirationTime ?? Date.now() + 47 * 3600_000), ready: f.state === "ACTIVE" };
+}
+
+export async function uploadBookFile(pdf: Blob, title: string): Promise<AiFile> {
+  return toAiFile(await gemini().files.upload({ file: pdf, config: { mimeType: "application/pdf", displayName: title.slice(0, 100) } }));
+}
+
+export async function bookFileState(name: string): Promise<AiFile> {
+  return toAiFile(await gemini().files.get({ name }));
+}
+
+const FIND_SYSTEM = READ_SYSTEM.replace(
+  "You read photos of homework for primary-school children (grades 1–4) in Uzbekistan.",
+  `You read a school textbook (PDF) for primary-school children (grades 1–4) in Uzbekistan and find one exercise in it.
+Pages are named by the number PRINTED on the page, which often differs from the PDF page index. Exercises are numbered within the book or the lesson ("Упражнение 5", "5-mashq", "№ 5", "Exercise 5").
+Find the exercise the user asks for and transcribe only it. If it does not exist on that page, set readable to false.`,
+);
+
+/** Finds "page 21, exercise 5" in a textbook already in Gemini's file store. */
+export async function findInBook(fileUri: string, page: string, number: string, lang: Lang): Promise<{ readable: boolean; tasks: ReadTask[] }> {
+  const out = (await ask(
+    FIND_SYSTEM,
+    {
+      file: { uri: fileUri, mimeType: "application/pdf" },
+      text: `Find the exercise number ${number} on the page with the printed number ${page}. Transcribe it. Language for titles: ${LANG_NAME[lang]}.`,
+    },
+    READ_SCHEMA,
+    LESSON_JOB,
+    "gemini",
+  )) as { readable: boolean; tasks: (ReadTask | string)[] };
+  return cleanTasks(out);
 }

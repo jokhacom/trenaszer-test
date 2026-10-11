@@ -178,6 +178,53 @@ const S = {
   },
   skip: { uz: "Boshqa masala", ru: "Другая задача", en: "Another problem" },
 
+  // Textbooks
+  bookTitle: { uz: "Darslikdan", ru: "Из учебника", en: "From a textbook" },
+  bookDesc: { uz: "Sahifa va mashq raqamini yoz", ru: "Напиши страницу и номер упражнения", en: "Type the page and exercise number" },
+  bookPick: { uz: "Darslikni tanla:", ru: "Выбери учебник:", en: "Choose a textbook:" },
+  bookNone: {
+    uz: "Bu sinf uchun hali darslik yo‘q. Kattalardan PDF qo‘shishni so‘ra.",
+    ru: "Для этого класса учебников пока нет. Попроси взрослого добавить PDF.",
+    en: "No textbooks for this grade yet. Ask a grown-up to add a PDF.",
+  },
+  bookAdd: { uz: "➕ Darslik qo‘shish (PDF)", ru: "➕ Добавить учебник (PDF)", en: "➕ Add a textbook (PDF)" },
+  bookPage: { uz: "Sahifa", ru: "Страница", en: "Page" },
+  bookNumber: { uz: "Mashq", ru: "Упражнение", en: "Exercise" },
+  bookFind: { uz: "Topish", ru: "Найти", en: "Find" },
+  bookFinding: { uz: "Darslikdan mashqni qidiryapman…", ru: "Ищу упражнение в учебнике…", en: "Looking for the exercise in the book…" },
+  bookNotFound: {
+    uz: "Bunday mashqni topmadim. Sahifa va raqamni tekshir.",
+    ru: "Не нашёл такое упражнение. Проверь страницу и номер.",
+    en: "I couldn't find that exercise. Check the page and number.",
+  },
+  bookChange: { uz: "Boshqa darslik", ru: "Другой учебник", en: "Another textbook" },
+  bookOff: {
+    uz: "Darsliklar sayt bulutga (Supabase) va Gemini’ga ulanganda ishlaydi.",
+    ru: "Учебники заработают, когда к сайту подключат облако (Supabase) и Gemini.",
+    en: "Textbooks work once the site is connected to the cloud (Supabase) and Gemini.",
+  },
+  bookName: { uz: "Nomi", ru: "Название", en: "Title" },
+  bookSubject: { uz: "Fan", ru: "Предмет", en: "Subject" },
+  bookUpload: { uz: "Yuklash", ru: "Загрузить", en: "Upload" },
+  bookUploading: { uz: "Darslikni yuklayapman…", ru: "Загружаю учебник…", en: "Uploading the textbook…" },
+  bookPreparing: {
+    uz: "Mirodil darslikni varaqlayapti… Katta kitob bir-ikki daqiqa olishi mumkin.",
+    ru: "Миродил листает учебник… Большая книга — до пары минут.",
+    en: "Mirodil is leafing through the book… A big book can take a couple of minutes.",
+  },
+  bookTooBig: { uz: "Fayl 50 MB dan katta. Kichikroq fayl tanla.", ru: "Файл больше 50 МБ. Возьми файл поменьше.", en: "The file is over 50 MB. Choose a smaller one." },
+  bookNotPdf: { uz: "Faqat PDF fayl.", ru: "Нужен файл PDF.", en: "Only PDF files." },
+  bookForParents: {
+    uz: "Kattalar uchun: sinfingizning elektron darsligini yuklang. Uni shu sinfning barcha o‘quvchilari ko‘radi.",
+    ru: "Для взрослых: загрузите электронный учебник своего класса. Его увидят все ученики этого класса.",
+    en: "For grown-ups: upload the e-textbook for your grade. All pupils of this grade will see it.",
+  },
+  subjMath: { uz: "Matematika", ru: "Математика", en: "Maths" },
+  subjLanguage: { uz: "Ona tili / rus tili", ru: "Родной / русский язык", en: "Mother tongue / Russian" },
+  subjReading: { uz: "O‘qish", ru: "Чтение", en: "Reading" },
+  subjEnglish: { uz: "Ingliz tili", ru: "Английский", en: "English" },
+  subjWorld: { uz: "Atrofimizdagi olam", ru: "Окружающий мир", en: "The world around us" },
+
   // One rule + a mini-game ({i}, {n}, {a}, {k} are filled in by the app)
   drillRule: { uz: "Avval qoida", ru: "Сначала правило", en: "First, the rule" },
   drillStart: { uz: "Tushunarli, o‘ynaymiz! 🎮", ru: "Понятно, играем! 🎮", en: "Got it, let's play! 🎮" },

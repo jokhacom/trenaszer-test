@@ -6,6 +6,7 @@ import { shrinkPhoto } from "@/lib/image";
 import { gapCount } from "@/lib/drill";
 import { recordPhotoTask, recordResult } from "@/lib/progress";
 import type { Drill as DrillData, Grade, Lang, Lesson, Topic } from "@/lib/types";
+import Books from "./Books";
 import Drill from "./Drill";
 import Ladder from "./Ladder";
 import Mirodil from "./Mirodil";
@@ -125,11 +126,21 @@ export default function PhotoFlow({ lang, grade, ai, onHome }: { lang: Lang; gra
       setMessage(`${t("notSupported")} (${t("errorCode")}: unreadable)`);
       setStage({ s: "start" });
     } else {
-      const first = found[0].text;
-      const mode = isDrill(first, found[0].gaps) ? "drill" : undefined;
-      prefetch.current = { text: first, result: post("/api/lesson", { text: first, lang, grade, image: dataUrl, mode }) };
-      setStage(found.length === 1 ? { s: "confirm", text: first, gaps: found[0].gaps } : { s: "pick" });
+      showTasks(found, dataUrl);
     }
+  }
+
+  /** Tasks from a photo or a textbook: confirm one, or pick among several. */
+  function showTasks(found: PhotoTask[], image: string | null) {
+    setTasks(found);
+    setDone([]);
+    setCurrent(null);
+    setMessage(null);
+    const first = found[0].text;
+    const mode = isDrill(first, found[0].gaps) ? "drill" : undefined;
+    // The lesson for the first question starts building while the child checks the text.
+    prefetch.current = { text: first, result: post("/api/lesson", { text: first, lang, grade, image: image ?? undefined, mode }) };
+    setStage(found.length === 1 ? { s: "confirm", text: first, gaps: found[0].gaps } : { s: "pick" });
   }
 
   async function buildLesson(text: string, withPhoto: boolean, gaps?: boolean) {
@@ -310,6 +321,16 @@ export default function PhotoFlow({ lang, grade, ai, onHome }: { lang: Lang; gra
               </button>
             </form>
           </div>
+          {ai && (
+            <Books
+              lang={lang}
+              grade={grade}
+              onFound={(found) => {
+                setPhoto(null);
+                showTasks(found, null);
+              }}
+            />
+          )}
         </div>
       )}
 
