@@ -89,6 +89,17 @@ describe("Gemini requests", () => {
     if (r.ok) expect(r.lesson.hint).not.toContain("17");
   });
 
+  it("reads the photo again with the main model when the quick read finds nothing", async () => {
+    env({ GEMINI_API_KEY: "g" });
+    generateContent
+      .mockResolvedValueOnce({ text: '{"readable": false, "tasks": []}' })
+      .mockResolvedValueOnce({ text: '{"readable": true, "tasks": [{"title": "су(б, бб)оту", "text": "Выбери: су(б, бб)оту"}]}' });
+    const out = await readTask("AAAA", "image/jpeg");
+    expect(out).toEqual({ readable: true, tasks: [{ title: "су(б, бб)оту", text: "Выбери: су(б, бб)оту" }] });
+    const [quick, careful] = generateContent.mock.calls.map((c) => c[0]);
+    expect(quick.model).not.toBe(careful.model);
+  });
+
   it("falls back to simpler settings when Gemini rejects an option", async () => {
     env({ GEMINI_API_KEY: "g" });
     generateContent
