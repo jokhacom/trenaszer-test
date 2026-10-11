@@ -32,6 +32,33 @@ export function migrate(s: Sql): Promise<void> {
         created_at timestamptz not null default now()
       )`;
     await s`alter table lessons enable row level security`;
+    // Textbooks: the PDF lives in Supabase Storage, a copy in the AI's file store.
+    await s`
+      create table if not exists books (
+        id uuid primary key default gen_random_uuid(),
+        title text not null,
+        grade integer not null,
+        subject text not null,
+        lang text not null,
+        path text not null,
+        size_bytes bigint not null default 0,
+        ai_file text,
+        ai_uri text,
+        ai_expires timestamptz,
+        created_at timestamptz not null default now()
+      )`;
+    await s`alter table books enable row level security`;
+    // Exercises already found in a book: "page 21, exercise 5" costs AI tokens once.
+    await s`
+      create table if not exists book_tasks (
+        book_id uuid not null references books(id) on delete cascade,
+        page text not null,
+        number text not null,
+        tasks jsonb not null,
+        created_at timestamptz not null default now(),
+        primary key (book_id, page, number)
+      )`;
+    await s`alter table book_tasks enable row level security`;
   })().catch((e) => {
     ready = null; // try again on the next request
     throw e;
