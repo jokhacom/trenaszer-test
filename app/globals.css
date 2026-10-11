@@ -510,6 +510,10 @@ textarea.answer-input {
   min-width: 40px;
 }
 
+.seg.seg-piece {
+  min-width: 0;
+}
+
 .seg + .seg {
   border-left-width: 0;
   border-top-left-radius: 0;
@@ -886,6 +890,14 @@ textarea.answer-input {
 /* Example slides */
 .slides {
   margin-top: 8px;
+}
+
+.equation {
+  margin: 8px 0;
+  font-size: 26px;
+  font-weight: 900;
+  white-space: nowrap;
+  overflow-x: auto;
 }
 
 .slide-nav {

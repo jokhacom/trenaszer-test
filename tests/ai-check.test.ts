@@ -1,7 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { matchesText } from "../lib/answers";
-import { checkLesson, type RawLesson } from "../lib/server/ai";
+import { checkLesson, tidy, toVisual, type RawLesson } from "../lib/server/ai";
 import { fingerprint } from "../lib/server/store";
+import { splitEquation } from "../lib/equation";
 
 const none = { kind: "none", bar_kind: "total", a: 0, b: 0, label_a: "", label_b: "", emoji: "" } as const;
 const num = (prompt: string, expect: number) => ({ prompt, kind: "number" as const, expect, options: [] });
@@ -143,5 +144,43 @@ describe("task fingerprint", () => {
     const b = fingerprint("у азиза 12 конфет у малики на 5 больше", "ru", 2);
     expect(a).toBe(b);
     expect(fingerprint("o‘n", "uz", 1)).toBe(fingerprint("o'n", "uz", 1));
+  });
+});
+
+describe("tidy", () => {
+  it("turns a colon before an equation into a full stop", () => {
+    expect(tidy("Увеличиваем результат на 50: 300 + 50 = 350.")).toBe("Увеличиваем результат на 50. 300 + 50 = 350.");
+    expect(tidy("Считаем: (2 + 3) × 4")).toBe("Считаем. (2 + 3) × 4");
+  });
+  it("keeps division and ordinary colons", () => {
+    expect(tidy("Делим: 12 : 3 = 4")).toBe("Делим. 12 : 3 = 4");
+    expect(tidy("12 : 3 = 4")).toBe("12 : 3 = 4");
+    expect(tidy("Посмотри, как она решается:")).toBe("Посмотри, как она решается:");
+    expect(tidy("Вспомни правило: слова с двумя согласными")).toBe("Вспомни правило: слова с двумя согласными");
+  });
+});
+
+describe("bar pictures for 'times' and 'share'", () => {
+  const pic = (bar_kind: string, a: number, b: number) =>
+    toVisual({ kind: "bar", bar_kind: bar_kind as never, a, b, label_a: "сумма", label_b: "", emoji: "" });
+  it("accepts 2–10 equal pieces and big numbers", () => {
+    expect(pic("times", 15621, 3)).toMatchObject({ kind: "bar", spec: { kind: "times", a: 15621, b: 3 } });
+    expect(pic("share", 350700, 3)).toMatchObject({ kind: "bar", spec: { kind: "share", a: 350700, b: 3 } });
+    expect(pic("times", 5, 40)).toBeUndefined();
+    expect(pic("total", 637700, 287000)).toMatchObject({ spec: { kind: "total" } });
+  });
+});
+
+describe("splitEquation", () => {
+  it("puts the equation at the end on its own", () => {
+    expect(splitEquation("Сумму увеличиваем на 50 — значит, прибавляем. 300 + 50 = 350.")).toEqual({
+      words: "Сумму увеличиваем на 50 — значит, прибавляем.",
+      equation: "300 + 50 = 350",
+    });
+    expect(splitEquation("Делим на 3 части. 350 700 : 3 = ?")).toEqual({ words: "Делим на 3 части.", equation: "350 700 : 3 = ?" });
+    expect(splitEquation("(200 + 100) + 50 = 350")).toEqual({ words: "", equation: "(200 + 100) + 50 = 350" });
+  });
+  it("leaves text without an equation alone", () => {
+    expect(splitEquation("Похожая задача: сумму 200 и 100 увеличить на 50.")).toEqual({ words: "Похожая задача: сумму 200 и 100 увеличить на 50." });
   });
 });

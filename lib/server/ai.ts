@@ -60,7 +60,8 @@ const STYLE = `Writing rules for every text a child will read:
 - Friendly, calm tone. Never scold, never say the child is slow.
 - Uzbek: Latin alphabet as in school textbooks, spelling per the imlo.uz dictionary, o‘ and g‘ written with ‘ (U+2018), tutuq belgisi ʼ (U+02BC).
 - Russian: style of "Пиши, сокращай" and "Ясно, понятно" (Ильяхов): no bureaucratic words, no filler, the main thing first, simple to complex. Prefer present tense so the text fits both boys and girls.
-- English: plain English (Oxford Guide to Plain English), vocabulary at CEFR A1–A2.`;
+- English: plain English (Oxford Guide to Plain English), vocabulary at CEFR A1–A2.
+- Maths: in school ":" is the division sign. Never put a colon after a number or before an equation; write a full stop instead ("Прибавляем 50. 300 + 50 = 350."). Write division with spaces: "12 : 3". Write big numbers in groups: "15 621".`;
 
 const READ_SYSTEM = `You read photos of homework for primary-school children (grades 1–4) in Uzbekistan.
 Transcribe every school task you can see in the photo exactly as written, keeping its original language and numbers. Printed or handwritten text may be in Uzbek, Russian or English.
@@ -90,13 +91,17 @@ Fill the fields of the other kinds with empty values.
 Build a help ladder. The app shows the steps one by one, only when the child asks for help:
 1. hint — a direction: where to look, what to start with, which rule to remember.
 2. question — one leading question. kind "number" (expect = the number) or kind "choice" (options and expect = index of the right option). It must not reveal the final answer.
-3. example_frames — a similar but SIMPLER task with DIFFERENT numbers or words, solved in full as 3–5 short slides. The first slide names it as a similar example. Its result must differ from the child's answer.
+3. example_frames — a similar but SIMPLER task with DIFFERENT, small, round numbers or other words, solved in full as 3–5 short slides. The first slide names it as a similar example and shows it as a picture. Each next slide is ONE action: first say what we do and why, in words, then the equation ("Сумму увеличиваем на 50 — значит, прибавляем. 300 + 50 = 350."). No numbering like "1)" or "2)". Its result must differ from the child's answer.
 4. together — 2–6 small steps through the child's own task. Each step is kind "number" or kind "choice". The child does every step. The last step leads to the final answer, but its prompt must not state it.
 
 Teaching approach (Singapore primary education): concrete → pictorial → abstract. Start from objects or a picture, then numbers or rules. For maths word problems think in parts and wholes (bar model). Strategies: draw a model, act it out, look for a pattern, work backwards, solve a simpler problem. For reading, send the child back to the right place in the text. For language, show the rule on a similar word.
 
-Pictures (picture objects; kind "none" when not useful):
-- "bar": bar model for a word problem: bar_kind total (two parts, whole unknown), remain (whole a, b taken away), more (b more than a), less (b fewer than a); a and b are the numbers from the task, label_a and label_b are short names.
+Words that change the action — when the task has them, the hint or the first slide explains the difference on a picture:
+- "увеличить на 5" / "5 ga oshirish" / "increase by 5" = add (+); "уменьшить на 5" = subtract (−);
+- "увеличить в 3 раза" / "3 marta oshirish" / "3 times more" = multiply (×); "уменьшить в 3 раза", "втрое" = divide (:).
+
+Pictures (picture objects; kind "none" only when a picture cannot help). In maths give EVERY example slide a picture and fill own_picture — children understand a picture before numbers:
+- "bar": bar model: bar_kind total (two parts a and b, the whole unknown; also "a increased by b"), remain (a, then b taken away; also "a decreased by b"), more (b more than a), less (b fewer than a), times (a taken b times; "a increased b times"; b from 2 to 10), share (a split into b equal parts; "a decreased b times"; b from 2 to 10). a and b are numbers from the task, label_a and label_b are short names.
 - "objects": up to 30 small objects; a and b are two groups; emoji is one emoji for the object.
 - "groups": multiplication or division; a groups with b objects each; emoji for the object.
 own_picture shows the child's own task and must never show its answer. Each example slide may have a picture of the example.
@@ -150,7 +155,7 @@ const PICTURE_SCHEMA = {
   type: "object",
   properties: {
     kind: { type: "string", enum: ["none", "bar", "objects", "groups"] },
-    bar_kind: { type: "string", enum: ["total", "remain", "more", "less"] },
+    bar_kind: { type: "string", enum: ["total", "remain", "more", "less", "times", "share"] },
     a: { type: "integer" },
     b: { type: "integer" },
     label_a: { type: "string" },
@@ -410,9 +415,19 @@ export async function buildLesson(task: string, lang: Lang, grade: Grade, image?
   return checkLesson(raw, lang);
 }
 
+/**
+ * In school ":" means division. A colon stuck to a word or number right
+ * before an equation ("на 50: 300 + 50") reads like "50 divided by 300", so
+ * it becomes a full stop. Division itself is written with spaces ("12 : 3").
+ */
+export function tidy(text: string): string {
+  return text.replace(/([\p{L}\d]):[ \t]+(?=[\d(])/gu, "$1. ");
+}
+
 /** Turns the AI's step into an app step; null if it is broken. */
 function toStep(st: RawStep): Step | null {
   if (!st?.prompt?.trim()) return null;
+  st = { ...st, prompt: tidy(st.prompt) };
   if (st.kind === "choice") {
     const options = (st.options ?? []).map((o) => o.trim()).filter(Boolean);
     if (options.length < 2 || !Number.isInteger(st.expect) || st.expect < 0 || st.expect >= options.length) return null;
@@ -427,7 +442,13 @@ const okInt = (n: number, lo: number, hi: number) => Number.isInteger(n) && n >=
 export function toVisual(p: RawPicture | undefined): Visual | undefined {
   if (!p || p.kind === "none") return undefined;
   const emoji = [...(p.emoji ?? "").trim()].slice(0, 2).join("") || "⭐";
-  if (p.kind === "bar" && okInt(p.a, 1, 100000) && okInt(p.b, 1, 100000) && ["total", "remain", "more", "less"].includes(p.bar_kind)) {
+  const pieces = p.bar_kind === "times" || p.bar_kind === "share";
+  if (
+    p.kind === "bar" &&
+    okInt(p.a, 1, 10_000_000) &&
+    (pieces ? okInt(p.b, 2, 10) : okInt(p.b, 1, 10_000_000)) &&
+    ["total", "remain", "more", "less", "times", "share"].includes(p.bar_kind)
+  ) {
     return { kind: "bar", spec: { kind: p.bar_kind, a: p.a, b: p.b, nameA: p.label_a.slice(0, 20), nameB: p.label_b.slice(0, 20) } };
   }
   if (p.kind === "objects" && okInt(p.a, 0, 30) && okInt(p.b, 0, 30) && p.a + p.b > 0 && p.a + p.b <= 30) {
@@ -442,7 +463,11 @@ export function toVisual(p: RawPicture | undefined): Visual | undefined {
 /** Numbers a picture shows, to make sure it never shows the answer. */
 function pictureNumbers(v: Visual | undefined): number[] {
   if (!v) return [];
-  if (v.kind === "bar") return [v.spec.a, v.spec.b];
+  if (v.kind === "bar") {
+    const { kind, a, b } = v.spec;
+    // The bar shows a and b; times / share also invite the product or the part.
+    return kind === "times" ? [a, b, a * b] : kind === "share" ? [a, b, a / b] : [a, b];
+  }
   if (v.kind === "objects") return [...v.counts, v.counts.reduce((x, y) => x + y, 0)];
   if (v.kind === "groups") return [v.groups, v.each, v.groups * v.each];
   return [];
@@ -493,6 +518,7 @@ export function checkLesson(raw: RawLesson, lang: Lang): LessonResult {
 
   const frames: Frame[] = (raw.example_frames ?? [])
     .filter((f) => f?.text?.trim() && !leaks(f.text))
+    .map((f) => ({ ...f, text: tidy(f.text) }))
     .map((f) => {
       const visual = toVisual(f.picture);
       // An example picture must not happen to show the child's numeric answer either.
@@ -515,7 +541,7 @@ export function checkLesson(raw: RawLesson, lang: Lang): LessonResult {
       answerKind: kind,
       choices,
       accepted,
-      hint: leaks(raw.hint) ? GENERIC_HINT[lang] : raw.hint,
+      hint: leaks(raw.hint) ? GENERIC_HINT[lang] : tidy(raw.hint),
       question,
       example: frames.length >= 2 ? frames.map((f) => f.text) : [],
       exampleFrames: frames.length >= 2 ? frames : undefined,
