@@ -178,6 +178,30 @@ const S = {
   },
   skip: { uz: "Boshqa masala", ru: "Другая задача", en: "Another problem" },
 
+  // One rule + a mini-game ({i}, {n}, {a}, {k} are filled in by the app)
+  drillRule: { uz: "Avval qoida", ru: "Сначала правило", en: "First, the rule" },
+  drillStart: { uz: "Tushunarli, o‘ynaymiz! 🎮", ru: "Понятно, играем! 🎮", en: "Got it, let's play! 🎮" },
+  drillPick: { uz: "To‘g‘ri yozilishini tanla:", ru: "Выбери, как пишется правильно:", en: "Choose the right spelling:" },
+  drillProgress: { uz: "{n} tadan {i}-so‘z", ru: "Слово {i} из {n}", en: "Word {i} of {n}" },
+  drillRemember: { uz: "Qoidani esla:", ru: "Вспомни правило:", en: "Remember the rule:" },
+  drillLater: { uz: "O‘tkazib yuborish — keyin qaytamiz", ru: "Пропустить — вернёмся потом", en: "Skip — we'll come back later" },
+  drillAgain: {
+    uz: "Bu so‘zni o‘tkazib yuborgan edik. Yana urinib ko‘ramiz!",
+    ru: "Это слово мы пропустили. Попробуем ещё раз!",
+    en: "We skipped this word. Let's try again!",
+  },
+  drillShowRule: { uz: "Qoidani ko‘rish", ru: "Посмотреть правило", en: "See the rule" },
+  drillDone: {
+    uz: "Tayyor! Birinchi urinishda o‘zing topding: {n} tadan {a} ta.",
+    ru: "Готово! С первого раза сам: {a} из {n}.",
+    en: "Done! Right on the first try: {a} of {n}.",
+  },
+  drillLeft: {
+    uz: "Hali chiqmadi: {k} ta so‘z. Qoidani takrorla va keyinroq yana urinib ko‘r.",
+    ru: "Пока не получилось: {k}. Повтори правило и попробуй ещё раз позже.",
+    en: "Not yet: {k}. Review the rule and try again later.",
+  },
+
   // Read together
   readPick: { uz: "Qaysi hikoyani o‘qiymiz?", ru: "Какую историю читаем?", en: "Which story shall we read?" },
   readFirst: {

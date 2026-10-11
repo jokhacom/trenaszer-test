@@ -106,3 +106,32 @@ export interface Lesson {
   bar?: BarSpec;
   source: "local" | "ai";
 }
+
+/**
+ * "One rule + a mini-game": an exercise with many gaps of one kind (choose
+ * б or бб in fifteen words). The rule is taught once, then the child goes
+ * through every word. One AI call for the whole exercise.
+ */
+export interface DrillItem {
+  /** The word with its gap, as printed: "су(б, бб)оту". */
+  prompt: string;
+  /** The sentence around it, so the child sees the word in context. */
+  context?: string;
+  /** Full words to choose from; `answer` is the right index. */
+  options: string[];
+  answer: number;
+  /** A nudge for this word after a wrong choice. Never the right word. */
+  hint?: string;
+}
+
+export interface Drill {
+  id: string;
+  lang: Lang;
+  subject?: Subject;
+  task: string;
+  /** The rule, explained simply on words that are not in the exercise. */
+  rule: string;
+  /** A similar word worked through as slides. */
+  example: Frame[];
+  items: DrillItem[];
+}

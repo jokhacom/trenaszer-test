@@ -10,7 +10,8 @@ import { ApiError, GoogleGenAI, ThinkingLevel } from "@google/genai";
 import { evaluate } from "../expression";
 import { containsNumber } from "../problems";
 import { containsText } from "../answers";
-import type { AnswerKind, BarSpec, Frame, Grade, Lang, Lesson, Step, Subject, Visual } from "../types";
+import { gapCount, shuffleFor } from "../drill";
+import type { AnswerKind, BarSpec, Drill, DrillItem, Frame, Grade, Lang, Lesson, Step, Subject, Visual } from "../types";
 
 export const CLAUDE_MODEL = process.env.CLAUDE_MODEL || "claude-sonnet-5-5";
 export const GEMINI_MODEL = process.env.GEMINI_MODEL || "gemini-flash-latest";
@@ -68,7 +69,7 @@ Transcribe the printed task only. Ignore pencil or pen marks a child has already
 - One array item per task. "text" is the full task. Keep the task number if there is one ("№5. ...").
 - "title" is a very short name of the question for a button, 2–5 words, in the language given by the user (e.g. "Расстояние до Нукуса", "Nukusgacha masofa", "Distance to Nukus").
 - If one task asks several questions (for example, distances to several cities), make one item per question. Each item must be complete on its own: repeat the shared condition and write the numbers the child needs, including numbers that are shown only in a picture, diagram, number line or table (describe them in words, e.g. "Posts stand every 10 km; the post before Samarkand shows 150").
-- An exercise with many gaps or choices (insert a letter, choose the right spelling, put a word in the right form): make one item per gap, so each item has exactly one answer. Text: the instruction, the word with the gap, then its sentence for context ("Выбери правильный вариант: су(б, бб)оту. Предложение: В су(б, бб)оту наша гру(п, пп)а пошла в парк."). Title: the word with the gap ("су(б, бб)оту").
+- An exercise with many gaps or choices of one kind (insert a letter, choose the right spelling, put words in the right form): ONE item for the whole exercise with gaps = true. Text: the instruction, then the whole text with every gap exactly as printed ("Выбери правильный вариант. В су(б, бб)оту наша гру(п, пп)а..."). Title: the topic ("Двойные согласные"). For every other task gaps = false.
 - Do not solve anything and do not add hints.
 - If the photo is not a school task, or it is unreadable, set readable to false and return an empty list.
 ${STYLE}`;
@@ -123,8 +124,8 @@ const READ_SCHEMA = {
       type: "array",
       items: {
         type: "object",
-        properties: { title: { type: "string" }, text: { type: "string" } },
-        required: ["title", "text"],
+        properties: { title: { type: "string" }, text: { type: "string" }, gaps: { type: "boolean" } },
+        required: ["title", "text", "gaps"],
         additionalProperties: false,
       },
     },
@@ -310,6 +311,8 @@ export interface ReadTask {
   title: string;
   /** Full task text sent to the help ladder. */
   text: string;
+  /** Many gaps of one kind: taught as "one rule + a mini-game". */
+  gaps?: boolean;
 }
 
 export async function readTask(
@@ -340,7 +343,11 @@ function cleanTasks(out: { readable: boolean; tasks: (ReadTask | string)[] }): {
   const tasks = (out.tasks ?? [])
     // Some models return plain strings despite the schema; accept both.
     .map((x) => (typeof x === "string" ? { title: "", text: x } : x))
-    .map((x) => ({ title: (x.title ?? "").trim(), text: (x.text ?? "").trim() }))
+    .map((x): ReadTask => {
+      const text = (x.text ?? "").trim();
+      const gaps = Boolean(x.gaps) || gapCount(text) >= 2;
+      return { title: (x.title ?? "").trim(), text, ...(gaps ? { gaps } : {}) };
+    })
     .filter((x) => x.text)
     .slice(0, 20);
   return { readable: Boolean(out.readable), tasks };
@@ -512,6 +519,128 @@ export function checkLesson(raw: RawLesson, lang: Lang): LessonResult {
       own,
       together,
       source: "ai",
+    },
+  };
+}
+
+// ---- "One rule + a mini-game" for exercises with many gaps of one kind ----
+
+const DRILL_SYSTEM = `You are Mirodil, a patient tutor for primary-school children (grades 1–4) in Uzbekistan.
+The product's main rule: the AI never does the homework for the child. The child must choose every answer.
+
+You receive an exercise with many gaps or choices of one kind (for example: choose б or бб in fifteen words), sometimes with a photo of the page. Turn it into one short lesson and a mini-game:
+- rule: the rule behind the exercise in 2–4 short, simple sentences, explained on words that are NOT in the exercise. If the exercise mixes several rules, name each briefly.
+- example_frames: 3–4 short slides working through one similar word that is NOT in the exercise: look at the word, recall the rule, choose.
+- items: one item per gap, in the order of the text (at most 25):
+  - prompt: the word with its gap exactly as printed ("су(б, бб)оту");
+  - context: the sentence it is in, with the gaps as printed;
+  - options: 2–4 FULL words, one per variant ("суботу", "субботу") — never single letters;
+  - correct: the index of the right option (0-based); check it carefully;
+  - hint: one short nudge for this word if the child chooses wrong (which rule, what to listen to or to check, a related word). Never the right word itself.
+Never write any right word in rule, example_frames or hints.
+Set supported to false when the exercise is not like this (it has no gaps or choices, or the answers are not words), and explain briefly in reason.
+
+Write every text in the output language given by the user, except the words of the exercise, which stay as printed.
+${STYLE}`;
+
+const DRILL_SCHEMA = {
+  type: "object",
+  properties: {
+    supported: { type: "boolean" },
+    reason: { type: "string" },
+    subject: { type: "string", enum: ["math", "language", "reading", "english", "world"] },
+    task: { type: "string" },
+    rule: { type: "string" },
+    example_frames: {
+      type: "array",
+      items: { type: "object", properties: { text: { type: "string" } }, required: ["text"], additionalProperties: false },
+    },
+    items: {
+      type: "array",
+      items: {
+        type: "object",
+        properties: {
+          prompt: { type: "string" },
+          context: { type: "string" },
+          options: { type: "array", items: { type: "string" } },
+          correct: { type: "integer" },
+          hint: { type: "string" },
+        },
+        required: ["prompt", "context", "options", "correct", "hint"],
+        additionalProperties: false,
+      },
+    },
+  },
+  required: ["supported", "reason", "subject", "task", "rule", "example_frames", "items"],
+  additionalProperties: false,
+};
+
+export interface RawDrill {
+  supported: boolean;
+  reason: string;
+  subject: Subject;
+  task: string;
+  rule: string;
+  example_frames: { text: string }[];
+  items: { prompt: string; context: string; options: string[]; correct: number; hint: string }[];
+}
+
+export type DrillResult = { ok: true; drill: Drill } | { ok: false; reason: string };
+
+export async function buildDrill(task: string, lang: Lang, grade: Grade, image?: Input["image"]): Promise<DrillResult> {
+  const raw = (await ask(
+    DRILL_SYSTEM,
+    { image, text: `Output language: ${LANG_NAME[lang]}\nGrade: ${grade}\nExercise:\n${task}` },
+    DRILL_SCHEMA,
+    LESSON_JOB,
+  )) as RawDrill;
+  return checkDrill(raw, lang);
+}
+
+/**
+ * Checks the AI's mini-game: every item needs real options and a valid right
+ * index, and no rule, slide or hint may contain a right word.
+ */
+export function checkDrill(raw: RawDrill, lang: Lang): DrillResult {
+  if (!raw.supported) return { ok: false, reason: raw.reason || "unsupported" };
+  const items: DrillItem[] = [];
+  for (const it of raw.items ?? []) {
+    const options = (it.options ?? []).map((o) => o.trim()).filter(Boolean);
+    if (!it.prompt?.trim() || options.length < 2 || options.length > 4 || !okInt(it.correct, 0, options.length - 1)) continue;
+    if (new Set(options.map((o) => o.toLowerCase())).size !== options.length) continue;
+    // Shuffle here too: models like to put the right word first.
+    const right = options[it.correct];
+    const shuffled = shuffleFor(options, it.prompt);
+    items.push({
+      prompt: it.prompt.trim(),
+      context: it.context?.trim() || undefined,
+      options: shuffled,
+      answer: shuffled.indexOf(right),
+      hint: it.hint?.trim() || undefined,
+    });
+  }
+  if (items.length < 2) return { ok: false, reason: "few-items" };
+  items.splice(25);
+
+  const rights = items.map((it) => it.options[it.answer]);
+  const leaks = (s: string) => rights.some((w) => containsText(s, w));
+  if (!raw.rule?.trim() || leaks(raw.rule)) return { ok: false, reason: "rule-leak" };
+  for (const it of items) if (it.hint && leaks(it.hint)) it.hint = undefined;
+  const example: Frame[] = (raw.example_frames ?? [])
+    .map((f) => f?.text?.trim())
+    .filter((text): text is string => !!text && !leaks(text))
+    .map((text) => ({ text }));
+
+  return {
+    ok: true,
+    drill: {
+      id: `drill:${raw.task}`,
+      lang,
+      subject: raw.subject,
+      task: raw.task?.trim() || items.map((it) => it.prompt).join(", "),
+      rule: raw.rule.trim(),
+      example: example.length >= 2 ? example : [],
+      items,
     },
   };
 }

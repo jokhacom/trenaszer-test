@@ -3,8 +3,10 @@
 import { useEffect, useRef, useState } from "react";
 import { tr, type Key } from "@/lib/i18n";
 import { shrinkPhoto } from "@/lib/image";
+import { gapCount } from "@/lib/drill";
 import { recordPhotoTask, recordResult } from "@/lib/progress";
-import type { Grade, Lang, Lesson, Topic } from "@/lib/types";
+import type { Drill as DrillData, Grade, Lang, Lesson, Topic } from "@/lib/types";
+import Drill from "./Drill";
 import Ladder from "./Ladder";
 import Mirodil from "./Mirodil";
 
@@ -12,8 +14,12 @@ type Stage =
   | { s: "start" }
   | { s: "busy"; what: "reading" | "thinking" }
   | { s: "pick" }
-  | { s: "confirm"; text: string }
-  | { s: "lesson"; lesson: Lesson };
+  | { s: "confirm"; text: string; gaps?: boolean }
+  | { s: "lesson"; lesson: Lesson }
+  | { s: "drill"; drill: DrillData };
+
+/** Many gaps of one kind (from the photo reader, or seen in the text) → one rule + a mini-game. */
+const isDrill = (text: string, gaps?: boolean) => Boolean(gaps) || gapCount(text) >= 2;
 
 type PostResult = { ok: boolean; status: number; data: Record<string, unknown> };
 
@@ -36,6 +42,8 @@ function Waiting({ lang, what }: { lang: Lang; what: "reading" | "thinking" }) {
 interface PhotoTask {
   title: string;
   text: string;
+  /** Many gaps of one kind: one rule + a mini-game. */
+  gaps?: boolean;
 }
 
 /** Photo (or typed) task → "Is this your problem?" → help ladder. */
@@ -118,27 +126,53 @@ export default function PhotoFlow({ lang, grade, ai, onHome }: { lang: Lang; gra
       setStage({ s: "start" });
     } else {
       const first = found[0].text;
-      prefetch.current = { text: first, result: post("/api/lesson", { text: first, lang, grade, image: dataUrl }) };
-      setStage(found.length === 1 ? { s: "confirm", text: first } : { s: "pick" });
+      const mode = isDrill(first, found[0].gaps) ? "drill" : undefined;
+      prefetch.current = { text: first, result: post("/api/lesson", { text: first, lang, grade, image: dataUrl, mode }) };
+      setStage(found.length === 1 ? { s: "confirm", text: first, gaps: found[0].gaps } : { s: "pick" });
     }
   }
 
-  async function buildLesson(text: string, withPhoto: boolean) {
+  async function buildLesson(text: string, withPhoto: boolean, gaps?: boolean) {
+    const mode = isDrill(text, gaps) ? "drill" : undefined;
     setMessage(null);
     setStage({ s: "busy", what: "thinking" });
     const early = withPhoto && prefetch.current?.text === text ? prefetch.current : null;
     // The photo goes along so the AI can read numbers from pictures and diagrams.
-    const fresh = () => post("/api/lesson", { text, lang, grade, image: withPhoto ? (photo ?? undefined) : undefined });
+    const fresh = () => post("/api/lesson", { text, lang, grade, image: withPhoto ? (photo ?? undefined) : undefined, mode });
     let r = await (early?.result ?? fresh());
     if (!r.ok && early) {
       // The early request failed (often a busy AI): ask once more before showing an error.
       prefetch.current = null;
       if (r.data.error !== "unsupported") r = await fresh();
     }
+    if (r.ok && r.data.drill) return setStage({ s: "drill", drill: r.data.drill as DrillData });
     if (r.ok) return setStage({ s: "lesson", lesson: r.data.lesson as Lesson });
     showError(r);
     // If the photo had several questions, let the child pick another one.
     setStage(withPhoto && tasks.length > 1 ? { s: "pick" } : { s: "start" });
+  }
+
+  // More questions from the same photo: back to the list; otherwise start over.
+  function afterTask() {
+    if (tasks.length > 1) return setStage({ s: "pick" });
+    setPhoto(null);
+    setTyped("");
+    setStage({ s: "start" });
+  }
+
+  if (stage.s === "drill") {
+    return (
+      <Drill
+        drill={stage.drill}
+        grade={grade}
+        onDone={(r) => {
+          recordPhotoTask(r.solved, r.maxLevel);
+          if (r.solved && current !== null) setDone((d) => [...d, current]);
+        }}
+        onNext={afterTask}
+        nextLabel={tasks.length > 1 ? t("nextQuestion") : undefined}
+      />
+    );
   }
 
   if (stage.s === "lesson") {
@@ -151,16 +185,7 @@ export default function PhotoFlow({ lang, grade, ai, onHome }: { lang: Lang; gra
           else recordPhotoTask(r.solved, r.maxLevel);
           if (r.solved && current !== null) setDone((d) => [...d, current]);
         }}
-        onNext={() => {
-          // More questions from the same photo: back to the list.
-          if (tasks.length > 1) {
-            setStage({ s: "pick" });
-            return;
-          }
-          setPhoto(null);
-          setTyped("");
-          setStage({ s: "start" });
-        }}
+        onNext={afterTask}
         nextLabel={tasks.length > 1 ? t("nextQuestion") : undefined}
       />
     );
@@ -204,7 +229,7 @@ export default function PhotoFlow({ lang, grade, ai, onHome }: { lang: Lang; gra
                 style={{ justifyContent: "space-between", textAlign: "left", minHeight: tasks.length > 6 ? 56 : 68 }}
                 onClick={() => {
                   setCurrent(i);
-                  buildLesson(task.text, true);
+                  buildLesson(task.text, true, task.gaps);
                 }}
               >
                 <span>
@@ -223,11 +248,11 @@ export default function PhotoFlow({ lang, grade, ai, onHome }: { lang: Lang; gra
           <textarea
             className="answer-input"
             value={stage.text}
-            onChange={(e) => setStage({ s: "confirm", text: e.target.value })}
+            onChange={(e) => setStage({ s: "confirm", text: e.target.value, gaps: stage.gaps })}
             aria-label={t("isThisIt")}
           />
           <div className="row">
-            <button className="btn btn-primary" style={{ flex: 1 }} onClick={() => buildLesson(stage.text, true)} disabled={!stage.text.trim()}>
+            <button className="btn btn-primary" style={{ flex: 1 }} onClick={() => buildLesson(stage.text, true, stage.gaps)} disabled={!stage.text.trim()}>
               ✅ {t("yes")}
             </button>
             <button className="btn btn-light" style={{ flex: 1 }} onClick={() => fileRef.current?.click()}>

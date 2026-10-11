@@ -5,18 +5,21 @@
 
 import fs from "node:fs";
 import path from "node:path";
-import type { Lesson } from "../types";
+import type { Drill, Lesson } from "../types";
+
+/** What the cache keeps: a help ladder, or a mini-game for an exercise with many gaps. */
+type Saved = Lesson | Drill;
 import { db, migrate } from "./db";
 
 const FILE = path.join(process.cwd(), ".data", "lessons.json");
-const lessons = new Map<string, Lesson>();
+const lessons = new Map<string, Saved>();
 let loaded = false;
 
 function load() {
   if (loaded) return;
   loaded = true;
   try {
-    const data = JSON.parse(fs.readFileSync(FILE, "utf8")) as Record<string, Lesson>;
+    const data = JSON.parse(fs.readFileSync(FILE, "utf8")) as Record<string, Saved>;
     for (const [k, v] of Object.entries(data)) lessons.set(k, v);
   } catch {
     // No saved lessons yet.
@@ -48,7 +51,7 @@ export function fingerprint(text: string, lang: string, grade: number): string {
   return `${lang}|${grade}|${norm}`;
 }
 
-export async function getLesson(key: string): Promise<Lesson | undefined> {
+export async function getLesson(key: string): Promise<Saved | undefined> {
   load();
   const local = lessons.get(key);
   if (local) return local;
@@ -56,7 +59,7 @@ export async function getLesson(key: string): Promise<Lesson | undefined> {
   if (!s) return undefined;
   try {
     await migrate(s);
-    const rows = await s<{ lesson: Lesson }[]>`
+    const rows = await s<{ lesson: Saved }[]>`
       update lessons set hits = hits + 1 where key = ${key} returning lesson`;
     if (rows[0]) lessons.set(key, rows[0].lesson);
     return rows[0]?.lesson;
@@ -67,7 +70,7 @@ export async function getLesson(key: string): Promise<Lesson | undefined> {
   }
 }
 
-export async function putLesson(key: string, lesson: Lesson): Promise<void> {
+export async function putLesson(key: string, lesson: Saved): Promise<void> {
   load();
   lessons.set(key, lesson);
   persist();
