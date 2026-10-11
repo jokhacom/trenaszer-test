@@ -20,7 +20,7 @@ export async function POST(req: Request) {
 
   // 2. A task some child already sent: reuse the saved ladder.
   const key = fingerprint(text, lang, grade);
-  const cached = getLesson(key);
+  const cached = await getLesson(key);
   if (cached) return Response.json({ lesson: cached, cached: true });
 
   // 3. A new task: ask the AI once and save the result.
@@ -32,7 +32,7 @@ export async function POST(req: Request) {
     const image = m && m[2].length <= 7_000_000 ? { data: m[2], mediaType: m[1] as NonNullable<Input["image"]>["mediaType"] } : undefined;
     const result = await buildLesson(text, lang, grade, image);
     if (!result.ok) return Response.json({ error: "unsupported", reason: result.reason }, { status: 422 });
-    putLesson(key, result.lesson);
+    await putLesson(key, result.lesson);
     return Response.json({ lesson: result.lesson });
   } catch (e) {
     console.error("lesson failed", e);

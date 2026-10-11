@@ -352,3 +352,4 @@ npm run build      # сборка
 | `GEMINI_MODEL` | Модель Gemini для подсказок, по умолчанию `gemini-flash-latest` |
 | `GEMINI_READ_MODEL` | Быстрая модель Gemini для чтения фото, по умолчанию `gemini-flash-lite-latest` |
 | `CLAUDE_MODEL` | Модель Claude, по умолчанию `claude-sonnet-5-5` |
+| `POSTGRES_URL` | База Supabase. Vercel добавляет её сам при подключении Supabase (Storage). В ней хранятся готовые объяснения: задача, которую уже прислал один ребёнок, другим достаётся бесплатно. Без базы сайт тоже работает |

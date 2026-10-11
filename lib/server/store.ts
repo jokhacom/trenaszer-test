@@ -1,10 +1,12 @@
-// Prototype storage: lessons the AI already built, and a simple request limit.
-// In memory, mirrored to .data/ when the disk is writable. The full version
-// keeps lessons in the database so every child gets them for free.
+// Lessons the AI already built, and a simple request limit.
+// Lessons live in the cloud database when one is connected, so a task one
+// child already sent costs nothing the next time. A local copy (memory, and
+// .data/ when the disk is writable) works without a database too.
 
 import fs from "node:fs";
 import path from "node:path";
 import type { Lesson } from "../types";
+import { db, migrate } from "./db";
 
 const FILE = path.join(process.cwd(), ".data", "lessons.json");
 const lessons = new Map<string, Lesson>();
@@ -46,15 +48,39 @@ export function fingerprint(text: string, lang: string, grade: number): string {
   return `${lang}|${grade}|${norm}`;
 }
 
-export function getLesson(key: string): Lesson | undefined {
+export async function getLesson(key: string): Promise<Lesson | undefined> {
   load();
-  return lessons.get(key);
+  const local = lessons.get(key);
+  if (local) return local;
+  const s = db();
+  if (!s) return undefined;
+  try {
+    await migrate(s);
+    const rows = await s<{ lesson: Lesson }[]>`
+      update lessons set hits = hits + 1 where key = ${key} returning lesson`;
+    if (rows[0]) lessons.set(key, rows[0].lesson);
+    return rows[0]?.lesson;
+  } catch (e) {
+    // A database problem must not stop the child: the AI builds the lesson again.
+    console.error("lesson cache read failed", e);
+    return undefined;
+  }
 }
 
-export function putLesson(key: string, lesson: Lesson) {
+export async function putLesson(key: string, lesson: Lesson): Promise<void> {
   load();
   lessons.set(key, lesson);
   persist();
+  const s = db();
+  if (!s) return;
+  try {
+    await migrate(s);
+    await s`
+      insert into lessons (key, lesson) values (${key}, ${s.json(lesson as never)})
+      on conflict (key) do nothing`;
+  } catch (e) {
+    console.error("lesson cache write failed", e);
+  }
 }
 
 // ---- Request limit per visitor, so a public prototype can't run up the AI bill ----
