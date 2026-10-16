@@ -60,7 +60,9 @@ export default function App() {
       .then((d) => {
         setAi(Boolean(d.ai));
         setCloud(Boolean(d.cloud));
-        if (!p && d.cloud && !loadSession()) setScreen("login");
+        // From the landing page's "Log in with email" (/app?login=1), or a device without a profile.
+        const asked = new URLSearchParams(window.location.search).get("login") === "1";
+        if ((asked || !p) && d.cloud && !loadSession()) setScreen("login");
       })
       .catch(() => setAi(false))
       .finally(() => setReady(true));

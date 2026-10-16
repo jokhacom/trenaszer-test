@@ -1,0 +1,210 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import { L, type LKey } from "@/lib/landing";
+import { LANGS, type Lang } from "@/lib/types";
+import { LANG_NAMES } from "@/lib/i18n";
+import Mirodil from "./Mirodil";
+
+const FLAGS: Record<Lang, string> = { uz: "🇺🇿", ru: "🇷🇺", en: "🇬🇧" };
+const LANG_KEY = "mirodil:landingLang";
+
+/** A suzani rosette: the round embroidered flower of Uzbek suzani, in bright colours. */
+function Rosette({ size, colors }: { size: number; colors: [string, string, string] }) {
+  const [outer, middle, inner] = colors;
+  return (
+    <svg width={size} height={size} viewBox="0 0 100 100" aria-hidden className="lp-rosette">
+      {Array.from({ length: 8 }, (_, i) => (
+        <ellipse key={i} cx="50" cy="18" rx="11" ry="18" fill={outer} transform={`rotate(${i * 45} 50 50)`} />
+      ))}
+      <circle cx="50" cy="50" r="24" fill={middle} />
+      {Array.from({ length: 6 }, (_, i) => (
+        <circle key={i} cx="50" cy="35" r="5" fill="#fff7ea" transform={`rotate(${i * 60} 50 50)`} />
+      ))}
+      <circle cx="50" cy="50" r="10" fill={inner} />
+    </svg>
+  );
+}
+
+/**
+ * The landing page (www.mirodil.site): what Mirodil is, in the national style
+ * — atlas stripes, suzani rosettes, the doppi — with bright colours. The app
+ * itself lives at /app.
+ */
+export default function Landing() {
+  const [lang, setLang] = useState<Lang>("uz");
+  const [returning, setReturning] = useState(false);
+  const t = (k: LKey) => L[k][lang];
+
+  useEffect(() => {
+    // The email login link comes back to the site's main address: hand it to the app.
+    if (/access_token=|error_description=/.test(window.location.hash)) {
+      window.location.replace(`/app${window.location.hash}`);
+      return;
+    }
+    try {
+      const saved = localStorage.getItem(LANG_KEY) as Lang | null;
+      const profile = JSON.parse(localStorage.getItem("mirodil:profile") ?? "null") as { lang?: Lang } | null;
+      const l = saved ?? profile?.lang;
+      if (l && LANGS.includes(l)) setLang(l);
+      setReturning(Boolean(profile));
+    } catch {
+      // Storage is off: Uzbek by default.
+    }
+  }, []);
+
+  useEffect(() => {
+    document.documentElement.lang = lang;
+  }, [lang]);
+
+  function choose(l: Lang) {
+    setLang(l);
+    try {
+      localStorage.setItem(LANG_KEY, l);
+    } catch {
+      // Not kept: fine.
+    }
+  }
+
+  const steps: [string, LKey, LKey][] = [
+    ["📷", "step1", "step1Text"],
+    ["🪜", "step2", "step2Text"],
+    ["🎉", "step3", "step3Text"],
+  ];
+  const features: [string, LKey, LKey, string][] = [
+    ["🙅", "f1", "f1t", "lp-c-pink"],
+    ["🇸🇬", "f2", "f2t", "lp-c-blue"],
+    ["🎮", "f3", "f3t", "lp-c-green"],
+    ["🍬", "f4", "f4t", "lp-c-yellow"],
+    ["📚", "f5", "f5t", "lp-c-turq"],
+    ["🗣️", "f6", "f6t", "lp-c-purple"],
+    ["⏱️", "f7", "f7t", "lp-c-green"],
+    ["👨‍👩‍👧", "f8", "f8t", "lp-c-pink"],
+  ];
+
+  return (
+    <div className="lp">
+      <div className="atlas-band" />
+      <header className="lp-top">
+        <a className="lp-brand" href="/" aria-label="Mirodil">
+          <Mirodil size={44} />
+          <span>Mirodil</span>
+        </a>
+        <nav className="lp-langs" aria-label="Til / Язык / Language">
+          {LANGS.map((l) => (
+            <button key={l} className={`chip${l === lang ? " chip-on" : ""}`} onClick={() => choose(l)} aria-pressed={l === lang} title={LANG_NAMES[l]}>
+              {FLAGS[l]} <span className="lp-lang-name">{LANG_NAMES[l]}</span>
+            </button>
+          ))}
+        </nav>
+      </header>
+
+      <section className="lp-hero">
+        <div className="lp-hero-deco" aria-hidden>
+          <Rosette size={120} colors={["#f6b71a", "#d81b6a", "#1e6bd6"]} />
+          <Rosette size={80} colors={["#12a3a3", "#f6b71a", "#d81b6a"]} />
+          <Rosette size={64} colors={["#d81b6a", "#1e6bd6", "#f6b71a"]} />
+        </div>
+        <div className="lp-hero-text">
+          <h1>{t("heroTitle")}</h1>
+          <p>{t("heroText")}</p>
+          <div className="lp-cta">
+            <a className="btn btn-pink lp-btn" href="/app">
+              🚀 {t(returning ? "continue" : "start")}
+            </a>
+            <a className="btn btn-light lp-btn" href="/app?login=1">
+              📧 {t("login")}
+            </a>
+          </div>
+        </div>
+        <div className="lp-hero-hero">
+          <div className="bubble lp-hero-bubble">{t("bubble")}</div>
+          <Mirodil size={200} mood="cheer" />
+        </div>
+      </section>
+
+      <section className="lp-section">
+        <h2>{t("stepsTitle")}</h2>
+        <ol className="lp-steps">
+          {steps.map(([emoji, title, text], i) => (
+            <li key={title} className="lp-step">
+              <span className="lp-step-num">{i + 1}</span>
+              <span className="lp-step-emoji" aria-hidden>
+                {emoji}
+              </span>
+              <b>{t(title)}</b>
+              <span>{t(text)}</span>
+            </li>
+          ))}
+        </ol>
+      </section>
+
+      <section className="lp-section lp-demo-wrap">
+        <h2>{t("demoTitle")}</h2>
+        <div className="lp-demo" aria-hidden>
+          <div className="task-card">
+            <div className="task-text long">{t("demoTask")}</div>
+            <div className="lp-demo-dots">
+              {Array.from({ length: 13 }, (_, i) => (
+                <i key={i} className={i < 8 ? "a" : "b"} style={{ animationDelay: `${i * 80}ms` }} />
+              ))}
+            </div>
+          </div>
+          <div className="mirodil-row">
+            <Mirodil size={56} />
+            <div className="bubble">{t("demoHint")}</div>
+          </div>
+          <div className="bubble bubble-kid">{t("demoKid")}</div>
+          <div className="mirodil-row">
+            <Mirodil size={56} mood="cheer" />
+            <div className="bubble bubble-good">
+              {t("demoPraise")} <span className="sticker-pop">🌟</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section className="lp-section">
+        <h2>{t("featuresTitle")}</h2>
+        <div className="lp-features">
+          {features.map(([emoji, title, text, color]) => (
+            <div key={title} className={`lp-feature ${color}`}>
+              <span className="lp-feature-emoji" aria-hidden>
+                {emoji}
+              </span>
+              <b>{t(title)}</b>
+              <span>{t(text)}</span>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      <section className="lp-section lp-parents">
+        <Rosette size={72} colors={["#1e6bd6", "#f6b71a", "#d81b6a"]} />
+        <div className="stack" style={{ gap: 10 }}>
+          <h2>👨‍👩‍👧 {t("parentsTitle")}</h2>
+          <ul>
+            <li>{t("p1")}</li>
+            <li>{t("p2")}</li>
+            <li>{t("p3")}</li>
+          </ul>
+        </div>
+      </section>
+
+      <section className="lp-final">
+        <h2>{t("finalTitle")}</h2>
+        <p>{t("finalText")}</p>
+        <a className="btn btn-primary lp-btn" href="/app">
+          📷 {t(returning ? "continue" : "start")}
+        </a>
+      </section>
+
+      <footer className="lp-footer">
+        <span>
+          <b>{t("footer")}</b> · mirodil.site
+        </span>
+      </footer>
+      <div className="atlas-band" />
+    </div>
+  );
+}
