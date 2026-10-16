@@ -179,7 +179,23 @@ const S = {
   },
   skip: { uz: "Boshqa masala", ru: "Другая задача", en: "Another problem" },
 
-  otherWayAsk: { uz: "Yana qanday yechish mumkin? (+1 🍬)", ru: "А как ещё можно решить? (+1 🍬)", en: "How else can we solve it? (+1 🍬)" },
+  otherWayAsk: { uz: "Yana qanday yechish mumkin?", ru: "А как ещё можно решить?", en: "How else can we solve it?" },
+  // Praise for what the child did (process), not "you are clever".
+  praiseAlone: {
+    uz: "Sen o‘zing, yordamsiz yechding.",
+    ru: "Ты решил сам, без подсказок.",
+    en: "You solved it on your own, with no hints.",
+  },
+  praiseAfterHelp: {
+    uz: "Qiyin edi, lekin sen to‘xtamading va javobni o‘zing topding.",
+    ru: "Было трудно, но ты не сдался и сам нашёл ответ.",
+    en: "It was hard, but you kept going and found the answer yourself.",
+  },
+  praiseTogether: {
+    uz: "Har bir qadamni o‘zing qilding — mana shunday o‘rganiladi.",
+    ru: "Каждый шаг ты сделал сам — так и учатся.",
+    en: "You did every step yourself — that is how we learn.",
+  },
   otherWayTitle: { uz: "Boshqa yo‘l", ru: "Другой способ", en: "Another way" },
 
   // Number bonds ({a}, {whole}, {i}, {n} are filled in by the app)
@@ -215,9 +231,9 @@ const S = {
     en: "You reached gold! Keep collecting stickers.",
   },
   howEarn: {
-    uz: "O‘zing yechsang — 3 🍬, yordam bilan — 2 🍬, birga — 1 🍬. Har kuni birinchi masala uchun yana 2 🍬. Konfetlar hech qachon olib qo‘yilmaydi.",
-    ru: "Решил сам — 3 🍬, с подсказкой — 2 🍬, вместе — 1 🍬. Каждый день за первую задачу ещё 2 🍬. Конфеты никогда не отнимаются.",
-    en: "Solved alone — 3 🍬, with a hint — 2 🍬, together — 1 🍬. The first task each day gives 2 🍬 more. Candies are never taken away.",
+    uz: "Konfetlar — sening mehnating uchun: o‘zing yechsang, to‘xtamasang, boshqa yo‘lni izlasang. Ular hech qachon olib qo‘yilmaydi.",
+    ru: "Конфеты — за твой труд: когда решаешь сам, не сдаёшься, ищешь другой способ. Они никогда не отнимаются.",
+    en: "Candies are for your work: solving on your own, not giving up, looking for another way. They are never taken away.",
   },
   stickersTitle: { uz: "Stikerlar", ru: "Стикеры", en: "Stickers" },
   stickerEvery: { uz: "Har {n} 🍬 uchun yangi stiker", ru: "Новый стикер за каждые {n} 🍬", en: "A new sticker for every {n} 🍬" },

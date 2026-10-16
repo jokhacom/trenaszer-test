@@ -157,7 +157,7 @@ export default function Ladder({
     say({
       from: "mirodil",
       good: true,
-      text: `${vary(PRAISE[lang], seed.current++)} ${t("solvedSelf")}\n\n${t("whyQuestion")}`,
+      text: `${vary(PRAISE[lang], seed.current++)} ${t(helpUsed === 0 ? "praiseAlone" : helpUsed < 3 ? "praiseAfterHelp" : "praiseTogether")}\n\n${t("whyQuestion")}`,
       sticker: vary(REACTIONS, seed.current++),
     });
     report({ solved: true, maxLevel: helpUsed });
