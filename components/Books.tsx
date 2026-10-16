@@ -60,7 +60,8 @@ function upload(url: string, apikey: string, file: File, onProgress: (p: number)
     const xhr = new XMLHttpRequest();
     xhr.open("PUT", url);
     xhr.setRequestHeader("apikey", apikey);
-    xhr.setRequestHeader("Authorization", `Bearer ${apikey}`);
+    // Old Supabase keys are JWTs and also go in Authorization; new sb_… keys do not.
+    if (apikey.startsWith("eyJ")) xhr.setRequestHeader("Authorization", `Bearer ${apikey}`);
     xhr.setRequestHeader("Content-Type", "application/pdf");
     xhr.setRequestHeader("x-upsert", "false");
     xhr.upload.onprogress = (e) => e.lengthComputable && onProgress(e.loaded / e.total);

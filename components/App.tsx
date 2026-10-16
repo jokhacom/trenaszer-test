@@ -73,6 +73,10 @@ export default function App() {
           if (login === "ok" && r) {
             setNotice(tr(synced?.lang ?? lang, "cloudWelcome"));
             setScreen(synced ? "parents" : "welcome");
+          } else if (login === "ok") {
+            // The link worked but the cloud did not answer: say so instead of staying silent.
+            setNotice(`${tr(lang, "cloudSyncFailed")} (${tr(lang, "errorCode")}: sync)`);
+            if (loadProfile()) setScreen("parents");
           }
         });
       }
