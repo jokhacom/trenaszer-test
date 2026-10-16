@@ -18,10 +18,11 @@ import ParentReport from "./ParentReport";
 import ReadTogether from "./ReadTogether";
 import Session from "./Session";
 import Mirodil from "./Mirodil";
+import CloudCard from "./CloudCard";
 import RewardPop from "./RewardPop";
 import RewardsAlbum, { LevelBar } from "./RewardsAlbum";
 
-type Screen = "welcome" | "home" | "photo" | "session" | "bar" | "practice" | "read" | "parents" | "rewards" | "bonds" | "times";
+type Screen = "welcome" | "home" | "photo" | "session" | "bar" | "practice" | "read" | "parents" | "rewards" | "bonds" | "times" | "login";
 
 const AVATARS = ["🦁", "🐯", "🐼", "🦊", "🐰", "🦉", "🐢", "🐱"];
 const FLAGS: Record<Lang, string> = { uz: "🇺🇿", ru: "🇷🇺", en: "🇬🇧" };
@@ -34,6 +35,8 @@ export default function App() {
   const [practice, setPractice] = useState<Lesson | null>(null);
   const [cloud, setCloud] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
+  // The language of the login screen when there is no profile yet (a new phone or a new site address).
+  const [loginLang, setLoginLang] = useState<Lang | undefined>(undefined);
   const [rewards, setRewards] = useState<Rewards>({ candies: 0 });
 
   // Candies on the top bar follow every award.
@@ -135,6 +138,12 @@ export default function App() {
           <Welcome
             initial={profile}
             extraAvatars={avatarsFor(rewards.candies)}
+            cloud={cloud}
+            defaultLang={loginLang}
+            onLogin={(l) => {
+              setLoginLang(l);
+              setScreen("login");
+            }}
             onStart={(p) => {
               saveProfile(p);
               setProfile(p);
@@ -147,6 +156,7 @@ export default function App() {
           <Home
             profile={profile}
             rewards={rewards}
+            cloud={cloud}
             onOpen={setScreen}
             onPractice={(lesson) => {
               setPractice(lesson);
@@ -155,6 +165,26 @@ export default function App() {
           />
         )}
 
+        {screen === "login" && (
+          <div className="stack">
+            <h1>{tr(profile?.lang ?? loginLang ?? "uz", "loginButton")}</h1>
+            <CloudCard
+              lang={profile?.lang ?? loginLang ?? "uz"}
+              notice={notice}
+              onSynced={() => {
+                const p = loadProfile();
+                if (p) {
+                  setProfile(p);
+                  setRewards(loadRewards());
+                  setScreen("home");
+                }
+              }}
+            />
+            <button className="btn btn-light" onClick={() => setScreen(profile ? "home" : "welcome")}>
+              ← {tr(profile?.lang ?? loginLang ?? "uz", profile ? "home" : "back")}
+            </button>
+          </div>
+        )}
         {profile && screen === "times" && <TimesGame lang={profile.lang} grade={profile.grade} onHome={home} />}
         {profile && screen === "bonds" && <BondsGame lang={profile.lang} grade={profile.grade} onHome={home} />}
         {profile && screen === "rewards" && <RewardsAlbum lang={profile.lang} rewards={rewards} onHome={home} />}
@@ -207,14 +237,22 @@ export default function App() {
 function Welcome({
   initial,
   extraAvatars,
+  cloud,
+  defaultLang,
+  onLogin,
   onStart,
 }: {
   initial: Profile | null;
   /** Avatars unlocked with a level (bronze, silver, gold). */
   extraAvatars: string[];
+  /** Email login is set up: a family that used Mirodil before can get its progress back. */
+  cloud: boolean;
+  onLogin: (lang: Lang) => void;
   onStart: (p: Profile) => void;
+  /** The language chosen before going to the login screen and back. */
+  defaultLang?: Lang;
 }) {
-  const [lang, setLang] = useState<Lang>(initial?.lang ?? "uz");
+  const [lang, setLang] = useState<Lang>(initial?.lang ?? defaultLang ?? "uz");
   const [avatar, setAvatar] = useState(initial?.avatar ?? AVATARS[0]);
   const [grade, setGrade] = useState<Grade>(initial?.grade ?? 2);
   const greeting = `${tr(lang, "hello")} ${tr(lang, "helloMore")}`;
@@ -268,6 +306,11 @@ function Welcome({
       <button className="btn btn-primary btn-wide" style={{ minHeight: 76, fontSize: 26 }} onClick={() => onStart({ lang, avatar, grade })}>
         {tr(lang, "start")} 🚀
       </button>
+      {cloud && !loadSession() && (
+        <button className="btn btn-light btn-wide" onClick={() => onLogin(lang)}>
+          📧 {tr(lang, "loginHave")}
+        </button>
+      )}
     </div>
   );
 }
@@ -275,11 +318,13 @@ function Welcome({
 function Home({
   profile,
   rewards,
+  cloud,
   onOpen,
   onPractice,
 }: {
   profile: Profile;
   rewards: Rewards;
+  cloud: boolean;
   onOpen: (s: Screen) => void;
   onPractice: (l: Lesson) => void;
 }) {
@@ -356,6 +401,12 @@ function Home({
             ))}
           </div>
         </section>
+      )}
+
+      {cloud && !loadSession() && (
+        <button className="btn btn-light btn-wide" onClick={() => onOpen("login")}>
+          {tr(lang, "loginButton")} — <span className="muted">{tr(lang, "loginWhy")}</span>
+        </button>
       )}
 
       <button className="link-btn" onClick={() => onOpen("parents")}>

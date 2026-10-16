@@ -405,6 +405,13 @@ const S = {
     ru: "Готово! Вы вошли, прогресс сохранён.",
     en: "Done! You're logged in and progress is saved.",
   },
+  loginButton: { uz: "📧 Pochta orqali kirish", ru: "📧 Войти по почте", en: "📧 Log in with email" },
+  loginWhy: { uz: "natijalar saqlanadi", ru: "прогресс сохранится", en: "progress is kept" },
+  loginHave: {
+    uz: "Avval shug‘ullanganmisiz? Pochta orqali kiring",
+    ru: "Уже занимались? Войдите по почте",
+    en: "Used Mirodil before? Log in with email",
+  },
   cloudNotSetUp: {
     uz: "Pochta orqali kirish hali sozlanmagan. Sayt egasi uchun tekshiruv:",
     ru: "Вход по почте пока не настроен. Проверка для владельца сайта:",
