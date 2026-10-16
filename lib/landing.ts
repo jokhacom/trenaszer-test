@@ -14,6 +14,15 @@ export const L = {
     ru: "Пароль не нужен — на почту придёт ссылка.",
     en: "No password — a link comes to your email.",
   },
+  loginShort: { uz: "Kirish", ru: "Войти", en: "Log in" },
+  heroBadge: {
+    uz: "1–4-sinflar · Singapur metodikasi",
+    ru: "1–4 классы · Методика Сингапура",
+    en: "Grades 1–4 · The Singapore approach",
+  },
+  trust1: { uz: "Tayyor javob bermaydi", ru: "Не даёт готовых ответов", en: "Never gives the ready answer" },
+  trust2: { uz: "O‘zbek, rus, ingliz tilida", ru: "На узбекском, русском, английском", en: "In Uzbek, Russian, English" },
+  trust3: { uz: "Telefonda ishlaydi", ru: "Работает на телефоне", en: "Works on a phone" },
   heroTitle: {
     uz: "Farzandingiz javobni ko‘chirmaydi — tushunib yechadi",
     ru: "Ваш ребёнок не списывает ответ — а понимает и решает сам",
