@@ -16,6 +16,20 @@ vi.mock("@google/genai", () => ({
   ThinkingLevel: { LOW: "LOW", MINIMAL: "MINIMAL" },
 }));
 
+const anthropicCreate = vi.fn();
+vi.mock("@anthropic-ai/sdk", () => {
+  class APIError extends Error {
+    status?: number;
+  }
+  class Anthropic {
+    static APIError = APIError;
+    static APIConnectionTimeoutError = class extends APIError {};
+    static RateLimitError = class extends APIError {};
+    beta = { messages: { create: anthropicCreate } };
+  }
+  return { default: Anthropic };
+});
+
 const { buildLesson, provider, readTask } = await import("../lib/server/ai");
 const { ApiError } = await import("@google/genai");
 
@@ -31,17 +45,31 @@ afterEach(() => {
 });
 
 describe("AI provider choice", () => {
-  it("uses whichever key is set, Claude first", () => {
+  it("uses Gemini when its key is set, Claude otherwise", () => {
     env({});
     expect(provider()).toBeNull();
     env({ GEMINI_API_KEY: "g" });
     expect(provider()).toBe("gemini");
     env({ GEMINI_API_KEY: "g", ANTHROPIC_API_KEY: "a" });
-    expect(provider()).toBe("claude");
-    env({ GEMINI_API_KEY: "g", ANTHROPIC_API_KEY: "a", AI_PROVIDER: "gemini" });
     expect(provider()).toBe("gemini");
+    env({ GEMINI_API_KEY: "g", ANTHROPIC_API_KEY: "a", AI_PROVIDER: "claude" });
+    expect(provider()).toBe("claude");
     env({ ANTHROPIC_API_KEY: "a", AI_PROVIDER: "gemini" });
     expect(provider()).toBe("claude");
+  });
+
+  it("answers with Claude when Gemini is busy, not when it is forced", async () => {
+    env({ GEMINI_API_KEY: "g", ANTHROPIC_API_KEY: "a" });
+    generateContent.mockRejectedValue(new ApiError({ message: "overloaded", status: 503 }));
+    anthropicCreate.mockResolvedValueOnce({ stop_reason: "end_turn", content: [{ type: "text", text: '{"readable": true, "tasks": ["8 + 5"]}' }] });
+    const out = await readTask("AAAA", "image/png");
+    expect(out.tasks).toEqual([{ title: "", text: "8 + 5" }]);
+    expect(anthropicCreate).toHaveBeenCalledTimes(1);
+
+    env({ GEMINI_API_KEY: "g", ANTHROPIC_API_KEY: "a", AI_PROVIDER: "gemini" });
+    anthropicCreate.mockClear();
+    await expect(readTask("AAAA", "image/png")).rejects.toMatchObject({ code: "gemini-503" });
+    expect(anthropicCreate).not.toHaveBeenCalled();
   });
 });
 

@@ -33,17 +33,27 @@ const LESSON_JOB: Job = { kind: "lesson", budgetMs: 100_000 };
 
 type Provider = "claude" | "gemini";
 
+const hasClaude = () => Boolean(process.env.ANTHROPIC_API_KEY || process.env.ANTHROPIC_AUTH_TOKEN);
+const hasGemini = () => Boolean(process.env.GEMINI_API_KEY);
+
 /**
- * Which AI the site uses: AI_PROVIDER if set, otherwise whichever key exists
- * (Claude first). Without any key the site works with built-in tasks only.
+ * Which AI the site uses: AI_PROVIDER if set. Otherwise Gemini (free) when its
+ * key exists, else Claude. Without any key the site works with built-in tasks only.
  */
 export function provider(): Provider | null {
-  const claude = Boolean(process.env.ANTHROPIC_API_KEY || process.env.ANTHROPIC_AUTH_TOKEN);
-  const gemini = Boolean(process.env.GEMINI_API_KEY);
   const wanted = process.env.AI_PROVIDER?.toLowerCase();
-  if (wanted === "gemini" && gemini) return "gemini";
-  if (wanted === "claude" && claude) return "claude";
-  return claude ? "claude" : gemini ? "gemini" : null;
+  if (wanted === "gemini" && hasGemini()) return "gemini";
+  if (wanted === "claude" && hasClaude()) return "claude";
+  return hasGemini() ? "gemini" : hasClaude() ? "claude" : null;
+}
+
+/**
+ * When Gemini is the main AI, Claude answers if Gemini is busy or its free
+ * quota is used up. Not when AI_PROVIDER=gemini forces Gemini only.
+ */
+function backup(): Provider | null {
+  const forced = process.env.AI_PROVIDER?.toLowerCase() === "gemini";
+  return provider() === "gemini" && hasClaude() && !forced ? "claude" : null;
 }
 
 export function aiEnabled(): boolean {
@@ -208,21 +218,37 @@ export interface Input {
   text: string;
 }
 
+/** Gemini is busy (overloaded) or its free quota is used up: a quick error worth a backup. */
+const geminiBusy = (e: unknown) => e instanceof ApiError && [429, 500, 503, 504].includes(e.status);
+
 async function ask(system: string, input: Input, schema: Record<string, unknown>, job: Job, use = provider()): Promise<unknown> {
   try {
     return use === "gemini" ? await askGemini(system, input, schema, job) : await askClaude(system, input, schema, job);
   } catch (e) {
-    if (e instanceof AiError) throw e;
-    if (e instanceof Anthropic.APIConnectionTimeoutError || (e instanceof Error && e.name === "AbortError")) {
-      throw new AiError("ai_error", `${use}-timeout`, e);
+    // A slow timeout is not retried: the hosting limit would already be over.
+    if (use === "gemini" && geminiBusy(e) && backup() === "claude") {
+      console.warn(`Gemini busy (${(e as ApiError).status}), answering with Claude`);
+      try {
+        return await askClaude(system, input, schema, job);
+      } catch (e2) {
+        throw toAiError(e2, "claude");
+      }
     }
-    if (e instanceof Anthropic.RateLimitError || (e instanceof ApiError && e.status === 429)) throw new AiError("limit");
-    // A short code the child's parent can send us; the details stay in the server log.
-    if (e instanceof ApiError) throw new AiError("ai_error", `gemini-${e.status}`, e);
-    if (e instanceof Anthropic.APIError) throw new AiError("ai_error", `claude-${e.status ?? "net"}`, e);
-    if (e instanceof SyntaxError) throw new AiError("ai_error", "bad-json", e);
-    throw new AiError("ai_error", "unknown", e);
+    throw toAiError(e, use);
   }
+}
+
+function toAiError(e: unknown, use: Provider | null): AiError {
+  if (e instanceof AiError) return e;
+  if (e instanceof Anthropic.APIConnectionTimeoutError || (e instanceof Error && e.name === "AbortError")) {
+    return new AiError("ai_error", `${use}-timeout`, e);
+  }
+  if (e instanceof Anthropic.RateLimitError || (e instanceof ApiError && e.status === 429)) return new AiError("limit");
+  // A short code the child's parent can send us; the details stay in the server log.
+  if (e instanceof ApiError) return new AiError("ai_error", `gemini-${e.status}`, e);
+  if (e instanceof Anthropic.APIError) return new AiError("ai_error", `claude-${e.status ?? "net"}`, e);
+  if (e instanceof SyntaxError) return new AiError("ai_error", "bad-json", e);
+  return new AiError("ai_error", "unknown", e);
 }
 
 async function askClaude(system: string, input: Input, schema: Record<string, unknown>, job: Job): Promise<unknown> {
