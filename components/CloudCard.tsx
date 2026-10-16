@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { tr, type Key } from "@/lib/i18n";
-import { loadSession, loginAgain, syncNow } from "@/lib/cloud";
+import { loadSession, logoutToLanding, syncNow } from "@/lib/cloud";
 import type { Lang } from "@/lib/types";
 
 /** Parent login by email: progress is then kept in the cloud and joined across phones. */
@@ -69,8 +69,8 @@ export default function CloudCard({ lang, notice, onSynced }: { lang: Lang; noti
             <button
               className="btn btn-light"
               style={{ flex: 2 }}
-              // Login is required on this site: logging out goes back to the login screen.
-              onClick={loginAgain}
+              // Logging out goes back to the main page (www.mirodil.site).
+              onClick={logoutToLanding}
             >
               {t("cloudLogout")}
             </button>
