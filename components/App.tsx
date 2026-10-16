@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { gradeLabel, LANG_NAMES, tr } from "@/lib/i18n";
 import { makeLesson, TOPIC_NAMES } from "@/lib/problems";
+import { loadSession, startAutoSave, syncNow, takeLoginFromLink } from "@/lib/cloud";
 import { loadProfile, recordResult, saveProfile, weakTopics, type Profile } from "@/lib/progress";
 import { LANGS, type Grade, type Lang, type Lesson } from "@/lib/types";
 import BarGame from "./BarGame";
@@ -25,6 +26,8 @@ export default function App() {
   const [ready, setReady] = useState(false);
   const [ai, setAi] = useState(false);
   const [practice, setPractice] = useState<Lesson | null>(null);
+  const [cloud, setCloud] = useState(false);
+  const [notice, setNotice] = useState<string | null>(null);
 
   useEffect(() => {
     const p = loadProfile();
@@ -35,8 +38,40 @@ export default function App() {
     setReady(true);
     fetch("/api/status")
       .then((r) => r.json())
-      .then((d) => setAi(Boolean(d.ai)))
+      .then((d) => {
+        setAi(Boolean(d.ai));
+        setCloud(Boolean(d.cloud));
+      })
       .catch(() => setAi(false));
+
+    // A parent came back from the login link, or was logged in before:
+    // join this phone's progress with the cloud copy.
+    function checkLogin(first: boolean) {
+      const login = takeLoginFromLink();
+      const lang = loadProfile()?.lang ?? "ru";
+      if (login === "error") {
+        setNotice(tr(lang, "cloudBadLink"));
+        if (loadProfile()) setScreen("parents");
+      } else if (login === "ok" || (first && loadSession())) {
+        syncNow().then((r) => {
+          const synced = loadProfile();
+          if (synced) setProfile(synced);
+          if (login === "ok" && r) {
+            setNotice(tr(synced?.lang ?? lang, "cloudWelcome"));
+            setScreen(synced ? "parents" : "welcome");
+          }
+        });
+      }
+    }
+    checkLogin(true);
+    // The link may open in a tab where the site is already open.
+    const onHash = () => checkLogin(false);
+    window.addEventListener("hashchange", onHash);
+    const stopAutoSave = startAutoSave();
+    return () => {
+      window.removeEventListener("hashchange", onHash);
+      stopAutoSave();
+    };
   }, []);
 
   useEffect(() => {
@@ -100,6 +135,8 @@ export default function App() {
           <ParentReport
             lang={profile.lang}
             grade={profile.grade}
+            cloud={cloud}
+            notice={notice}
             onHome={home}
             onPractice={(lesson) => {
               setPractice(lesson);

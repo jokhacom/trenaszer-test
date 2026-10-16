@@ -69,9 +69,16 @@ export interface Frame {
   visual?: Visual;
 }
 
-/** Bar model of a word problem (Singapore model method). */
+/**
+ * Bar model of a word problem (Singapore model method).
+ * total: parts a and b, whole unknown (also "a increased by b");
+ * remain: a, then b taken away (also "a decreased by b");
+ * more / less: b more / fewer than a;
+ * times: a taken b times ("increase a b times");
+ * share: a split into b equal parts ("decrease a b times").
+ */
 export interface BarSpec {
-  kind: "total" | "remain" | "more" | "less";
+  kind: "total" | "remain" | "more" | "less" | "times" | "share";
   a: number;
   b: number;
   nameA: string;

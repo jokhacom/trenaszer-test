@@ -268,6 +268,28 @@ const S = {
 
   // Parent report
   parentTitle: { uz: "Ota-onalar uchun", ru: "Для родителей", en: "For parents" },
+  cloudTitle: { uz: "☁️ Natijalarni saqlash", ru: "☁️ Сохранять прогресс", en: "☁️ Save progress" },
+  cloudWhy: {
+    uz: "Pochta orqali kiring — telefon almashsa ham bolaning natijalari saqlanadi. Parol kerak emas.",
+    ru: "Войдите по почте — прогресс ребёнка сохранится, даже если сменить телефон. Пароль не нужен.",
+    en: "Log in with your email — your child's progress is kept even on a new phone. No password needed.",
+  },
+  cloudEmail: { uz: "Pochtangiz", ru: "Ваша почта", en: "Your email" },
+  cloudSend: { uz: "Havolani olish", ru: "Получить ссылку", en: "Get the link" },
+  cloudSent: {
+    uz: "{email} manziliga havola yubordik. Xatni shu telefonda oching va havolani bosing.",
+    ru: "Мы отправили ссылку на {email}. Откройте письмо на этом телефоне и нажмите на ссылку.",
+    en: "We sent a link to {email}. Open the email on this phone and tap the link.",
+  },
+  cloudOn: { uz: "Natijalar bulutda saqlanmoqda", ru: "Прогресс сохраняется в облаке", en: "Progress is saved in the cloud" },
+  cloudLogout: { uz: "Chiqish", ru: "Выйти", en: "Log out" },
+  cloudBadLink: { uz: "Havola eskirgan. Yangisini oling.", ru: "Ссылка устарела. Получите новую.", en: "The link has expired. Get a new one." },
+  cloudWelcome: {
+    uz: "Tayyor! Siz kirdingiz, natijalar saqlandi.",
+    ru: "Готово! Вы вошли, прогресс сохранён.",
+    en: "Done! You're logged in and progress is saved.",
+  },
+  cloudBadEmail: { uz: "Pochta manzilini tekshiring.", ru: "Проверьте адрес почты.", en: "Check the email address." },
   parentEmpty: {
     uz: "Hali ma’lumot kam. Farzandingiz bir nechta masala yechgandan keyin bu yerda hisobot paydo bo‘ladi.",
     ru: "Пока мало данных. Отчёт появится, когда ребёнок решит несколько задач.",
@@ -291,6 +313,11 @@ const S = {
     uz: "Ma’lumotlar faqat shu qurilmada saqlanadi.",
     ru: "Данные хранятся только на этом устройстве.",
     en: "Data is stored only on this device.",
+  },
+  parentPrivacyCloud: {
+    uz: "Ma’lumotlar shu qurilmada va Mirodil bulutida saqlanadi. Ularni faqat siz ko‘rasiz.",
+    ru: "Данные хранятся на этом устройстве и в облаке Mirodil. Их видите только вы.",
+    en: "Data is stored on this device and in the Mirodil cloud. Only you can see it.",
   },
 
   // Bar model game

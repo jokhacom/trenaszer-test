@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { tr } from "@/lib/i18n";
 import { speak } from "@/lib/speech";
+import { splitEquation } from "@/lib/equation";
 import type { Frame, Lang } from "@/lib/types";
 import Listen from "./Listen";
 import Visual from "./Visual";
@@ -12,6 +13,8 @@ export default function Slides({ frames, lang, autoSpeak }: { frames: Frame[]; l
   const [i, setI] = useState(0);
   const f = frames[i];
   const last = i === frames.length - 1;
+  // The equation goes on its own line, in big print, so "300 + 50 = 350" is never split.
+  const { words, equation } = splitEquation(f.text);
 
   useEffect(() => {
     if (autoSpeak) speak(f.text, lang);
@@ -19,7 +22,8 @@ export default function Slides({ frames, lang, autoSpeak }: { frames: Frame[]; l
 
   return (
     <div className="slides">
-      <div style={{ fontWeight: 800 }}>{f.text}</div>
+      {words && <div style={{ fontWeight: 800 }}>{words}</div>}
+      {equation && <div className="equation">{equation}</div>}
       {f.visual && <Visual v={f.visual} lang={lang} />}
       <div className="slide-nav">
         <button className="btn btn-light btn-small" onClick={() => setI(i - 1)} disabled={i === 0} aria-label={tr(lang, "back")}>
