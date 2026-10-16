@@ -50,6 +50,11 @@ function write(key: string, value: unknown) {
   }
 }
 
+/** Saves a value that travels to the cloud (the auto-save hears about it). */
+export function saveSynced(key: string, value: unknown) {
+  write(key, value);
+}
+
 export const loadProfile = () => read<Profile>(PROFILE_KEY);
 export const saveProfile = (p: Profile) => write(PROFILE_KEY, p);
 

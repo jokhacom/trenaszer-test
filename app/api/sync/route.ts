@@ -14,7 +14,8 @@ function clean(data: unknown): Snapshot | null {
   if (!data || typeof data !== "object") return null;
   const out: Snapshot = {};
   for (const k of SYNCED_KEYS) if (k in data) out[k] = (data as Snapshot)[k];
-  return JSON.stringify(out).length <= 200_000 ? out : null;
+  // "My tasks" keeps up to 60 tasks with their text: room for that.
+  return JSON.stringify(out).length <= 400_000 ? out : null;
 }
 
 /** The family's saved progress. */

@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { tr, type Key } from "@/lib/i18n";
 import { shrinkPhoto } from "@/lib/image";
 import { gapCount } from "@/lib/drill";
+import { addToHistory, loadHistory, markSolved, type HistoryEntry } from "@/lib/history";
 import { recordPhotoTask, recordResult } from "@/lib/progress";
 import type { Drill as DrillData, Grade, Lang, Lesson, Topic } from "@/lib/types";
 import Books from "./Books";
@@ -69,6 +70,10 @@ export default function PhotoFlow({
   // A photo can hold several questions; the child solves them one by one.
   const [tasks, setTasks] = useState<PhotoTask[]>([]);
   const [current, setCurrent] = useState<number | null>(null);
+  // The "My tasks" entry of the lesson on screen, marked solved when the child solves it.
+  const historyId = useRef<string | null>(null);
+  const [history, setHistory] = useState<HistoryEntry[]>([]);
+  useEffect(() => setHistory(loadHistory()), [stage.s]);
   const [done, setDone] = useState<number[]>([]);
   const fileRef = useRef<HTMLInputElement>(null);
   // The lesson for the first question starts building while the child is
@@ -168,11 +173,33 @@ export default function PhotoFlow({
       prefetch.current = null;
       if (r.data.error !== "unsupported") r = await fresh();
     }
-    if (r.ok && r.data.drill) return setStage({ s: "drill", drill: r.data.drill as DrillData });
-    if (r.ok) return setStage({ s: "lesson", lesson: r.data.lesson as Lesson });
+    if (r.ok) {
+      // Saved in "My tasks": opening it again later costs no AI call.
+      const title = (current !== null && tasks[current]?.title) || text.replace(/\s+/g, " ").slice(0, 70);
+      historyId.current = addToHistory({ title, text: text.slice(0, 2000), lang, grade, mode, key: r.data.key as string | undefined });
+      if (r.data.drill) return setStage({ s: "drill", drill: r.data.drill as DrillData });
+      return setStage({ s: "lesson", lesson: r.data.lesson as Lesson });
+    }
     showError(r);
     // If the photo had several questions, let the child pick another one.
     setStage(withPhoto && tasks.length > 1 ? { s: "pick" } : { s: "start" });
+  }
+
+  /** Opens a task from "My tasks": the saved lesson comes from the cloud, without the AI. */
+  async function reopen(e: HistoryEntry) {
+    setMessage(null);
+    setTasks([]);
+    setCurrent(null);
+    setPhoto(null);
+    setStage({ s: "busy", what: "thinking" });
+    const r = await post("/api/lesson", { text: e.text, lang: e.lang, grade: e.grade, mode: e.mode, key: e.key });
+    if (r.ok) {
+      historyId.current = addToHistory({ title: e.title, text: e.text, lang: e.lang, grade: e.grade, mode: e.mode, key: (r.data.key as string | undefined) ?? e.key });
+      if (r.data.drill) return setStage({ s: "drill", drill: r.data.drill as DrillData });
+      return setStage({ s: "lesson", lesson: r.data.lesson as Lesson });
+    }
+    showError(r);
+    setStage({ s: "start" });
   }
 
   // More questions from the same photo: back to the list; otherwise start over.
@@ -191,6 +218,7 @@ export default function PhotoFlow({
         onDone={(r) => {
           recordPhotoTask(r.solved, r.maxLevel);
           if (r.solved && current !== null) setDone((d) => [...d, current]);
+          if (r.solved && historyId.current) markSolved(historyId.current);
         }}
         onNext={afterTask}
         nextLabel={tasks.length > 1 ? t("nextQuestion") : undefined}
@@ -208,6 +236,7 @@ export default function PhotoFlow({
           if (stage.lesson.topic !== "other") recordResult(stage.lesson.topic as Topic, r.solved, r.maxLevel);
           else recordPhotoTask(r.solved, r.maxLevel);
           if (r.solved && current !== null) setDone((d) => [...d, current]);
+          if (r.solved && historyId.current) markSolved(historyId.current);
         }}
         onNext={afterTask}
         nextLabel={tasks.length > 1 ? t("nextQuestion") : undefined}
@@ -334,6 +363,7 @@ export default function PhotoFlow({
               </button>
             </form>
           </div>
+          {history.length > 0 && <MyTasks lang={lang} list={history} onOpen={reopen} />}
           {ai && (
             <Books
               lang={lang}
@@ -351,5 +381,38 @@ export default function PhotoFlow({
         ← {t("home")}
       </button>
     </div>
+  );
+}
+
+/** "My tasks": the last tasks, newest first; a tap opens the saved lesson. */
+function MyTasks({ lang, list, onOpen }: { lang: Lang; list: HistoryEntry[]; onOpen: (e: HistoryEntry) => void }) {
+  const [all, setAll] = useState(false);
+  const shown = all ? list : list.slice(0, 5);
+  return (
+    <section className="card stack">
+      <h2 style={{ margin: 0 }}>🕘 {tr(lang, "myTasks")}</h2>
+      <p className="muted" style={{ margin: 0, fontSize: 15 }}>
+        {tr(lang, "myTasksNote")}
+      </p>
+      {shown.map((e) => (
+        <button
+          key={e.id}
+          className="btn btn-light btn-wide"
+          style={{ justifyContent: "space-between", textAlign: "left", minHeight: 56 }}
+          onClick={() => onOpen(e)}
+        >
+          <span style={{ overflow: "hidden", textOverflow: "ellipsis" }}>
+            {e.solved ? "✅ " : "📝 "}
+            {e.title}
+          </span>
+          <span aria-hidden>→</span>
+        </button>
+      ))}
+      {list.length > 5 && !all && (
+        <button className="link-btn" style={{ margin: 0 }} onClick={() => setAll(true)}>
+          {tr(lang, "myTasksAll")} ({list.length})
+        </button>
+      )}
+    </section>
   );
 }

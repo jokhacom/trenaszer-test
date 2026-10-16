@@ -286,6 +286,14 @@ const S = {
   lockedAt: { uz: "«{level}» darajasida ochiladi", ru: "Откроется на уровне «{level}»", en: "Unlocks at «{level}»" },
   hooray: { uz: "Hurra!", ru: "Ура!", en: "Hooray!" },
 
+  myTasks: { uz: "Mening masalalarim", ru: "Мои задачи", en: "My tasks" },
+  myTasksNote: {
+    uz: "Bu yerda sen yechgan masalalar saqlanadi. Qayta ochish bepul.",
+    ru: "Здесь хранятся задачи, с которыми ты занимался. Открыть снова — бесплатно.",
+    en: "Tasks you worked on are kept here. Opening one again is free.",
+  },
+  myTasksAll: { uz: "Hammasini ko‘rsatish", ru: "Показать все", en: "Show all" },
+
   // Textbooks
   bookTitle: { uz: "Darslikdan", ru: "Из учебника", en: "From a textbook" },
   bookDesc: { uz: "Sahifa va mashq raqamini yoz", ru: "Напиши страницу и номер упражнения", en: "Type the page and exercise number" },
