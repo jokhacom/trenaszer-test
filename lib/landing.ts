@@ -25,9 +25,9 @@ export const L = {
     en: "Usual chatbots and answer sites usually give the solution right away. Mirodil leads the child step by step: a picture → a similar example → a question. For grades 1–4, based on the Singapore approach.",
   },
   bubble: {
-    uz: "Birga o‘ylaymiz — javobni o‘zing topasan!",
-    ru: "Подумаем вместе — ответ найдёшь сам!",
-    en: "Let's think together — you'll find the answer!",
+    uz: "Keling, birga o‘ylaymiz! Javobni topishingizga yordam beraman, lekin tayyor javobni aytmayman.",
+    ru: "Давайте подумаем вместе! Я помогу найти ответ, но готовый ответ не скажу.",
+    en: "Let's think it through together! I'll help you find the answer, but I won't give a ready-made one.",
   },
 
   compareTitle: { uz: "Oddiy AI va Mirodil", ru: "Обычный ИИ и Миродил", en: "A usual AI and Mirodil" },

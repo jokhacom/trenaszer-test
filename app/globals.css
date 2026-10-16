@@ -1229,6 +1229,9 @@ div.level-card {
 
 /* ===== Landing page (www.mirodil.site) ===== */
 .lp {
+  /* No black on the landing: text in a deep, bright violet. */
+  --ink: #4a2a8a;
+  color: var(--ink);
   overflow-x: hidden;
   background:
     radial-gradient(circle at 10% 0%, #ffe3ef 0, transparent 40%),
@@ -1313,7 +1316,9 @@ div.level-card {
 .lp-hero-bubble {
   font-weight: 800;
   text-align: center;
-  max-width: 320px;
+  max-width: 360px;
+  color: var(--magenta);
+  border-color: #f7b6d0;
 }
 
 .lp-hero-deco {
@@ -1698,4 +1703,15 @@ div.level-card {
     gap: 4px;
     margin-bottom: 6px;
   }
+}
+
+.lp-section > h2 {
+  color: var(--blue);
+}
+
+.lp-hero-bubble .sticker-pop {
+  display: block;
+  font-size: 40px;
+  line-height: 1.2;
+  margin-top: 4px;
 }
