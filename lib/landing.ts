@@ -14,6 +14,15 @@ export const L = {
     ru: "Пароль не нужен — на почту придёт ссылка.",
     en: "No password — a link comes to your email.",
   },
+  loginShort: { uz: "Kirish", ru: "Войти", en: "Log in" },
+  heroBadge: {
+    uz: "1–4-sinflar · Singapur metodikasi",
+    ru: "1–4 классы · Методика Сингапура",
+    en: "Grades 1–4 · The Singapore approach",
+  },
+  trust1: { uz: "Tayyor javob bermaydi", ru: "Не даёт готовых ответов", en: "Never gives the ready answer" },
+  trust2: { uz: "O‘zbek, rus, ingliz tilida", ru: "На узбекском, русском, английском", en: "In Uzbek, Russian, English" },
+  trust3: { uz: "Telefonda ishlaydi", ru: "Работает на телефоне", en: "Works on a phone" },
   heroTitle: {
     uz: "Farzandingiz javobni ko‘chirmaydi — tushunib yechadi",
     ru: "Ваш ребёнок не списывает ответ — а понимает и решает сам",
@@ -25,9 +34,9 @@ export const L = {
     en: "Usual chatbots and answer sites usually give the solution right away. Mirodil leads the child step by step: a picture → a similar example → a question. For grades 1–4, based on the Singapore approach.",
   },
   bubble: {
-    uz: "Keling, birga o‘ylaymiz! Javobni topishingizga yordam beraman, lekin tayyor javobni aytmayman.",
-    ru: "Давайте подумаем вместе! Я помогу найти ответ, но готовый ответ не скажу.",
-    en: "Let's think it through together! I'll help you find the answer, but I won't give a ready-made one.",
+    uz: "Keling, birga o‘ylaymiz!",
+    ru: "Давайте подумаем вместе!",
+    en: "Let's think it through together!",
   },
 
   compareTitle: { uz: "Oddiy AI va Mirodil", ru: "Обычный ИИ и Миродил", en: "A usual AI and Mirodil" },
