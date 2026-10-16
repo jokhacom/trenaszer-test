@@ -13,6 +13,7 @@ export const SYNCED_KEYS = [
   "mirodil:photo",
   "mirodil:rewards",
   "mirodil:methods",
+  "mirodil:reflect",
 ] as const;
 
 export type Snapshot = Partial<Record<(typeof SYNCED_KEYS)[number], unknown>>;
@@ -54,12 +55,14 @@ export function merge(local: Snapshot, remote: Snapshot): Snapshot {
     };
   }
 
-  // Which way of helping worked for the child: counts per method.
-  const lm = (local["mirodil:methods"] ?? {}) as Record<string, Counts>;
-  const rm = (remote["mirodil:methods"] ?? {}) as Record<string, Counts>;
-  const methods: Record<string, Counts> = {};
-  for (const m of new Set([...Object.keys(lm), ...Object.keys(rm)])) methods[m] = maxCounts(lm[m], rm[m])!;
-  if (Object.keys(methods).length) out["mirodil:methods"] = methods;
+  // Counts per kind of help, and the child's own "how I solved it / how it felt".
+  for (const key of ["mirodil:methods", "mirodil:reflect"] as const) {
+    const l = (local[key] ?? {}) as Record<string, Counts>;
+    const r = (remote[key] ?? {}) as Record<string, Counts>;
+    const joined: Record<string, Counts> = {};
+    for (const m of new Set([...Object.keys(l), ...Object.keys(r)])) joined[m] = maxCounts(l[m], r[m])!;
+    if (Object.keys(joined).length) out[key] = joined;
+  }
 
   for (const key of ["mirodil:reading", "mirodil:photo"] as const) {
     const m = maxCounts(local[key], remote[key]);

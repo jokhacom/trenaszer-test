@@ -5,6 +5,8 @@ import { GENTLE_WRONG, PRAISE, tr, type Key } from "@/lib/i18n";
 import { matchesText } from "@/lib/answers";
 import { classifyInput, sameNumber, vary, WRONG_BEFORE_STEP_UP, type Level } from "@/lib/ladder";
 import { helpOrder, preferredHelp, recordHelp, type Method } from "@/lib/methods";
+import { WORD_TOPICS } from "@/lib/problems";
+import { recordFeel, recordWay, type Feel, type Way } from "@/lib/reflect";
 import { award } from "@/lib/rewards";
 import { speak, stopSpeaking } from "@/lib/speech";
 import type { Frame, Grade, Lang, Lesson, Step, Visual as V } from "@/lib/types";
@@ -15,6 +17,31 @@ import Listen from "./Listen";
 import Mirodil, { type Mood } from "./Mirodil";
 
 const HELP_RANK: Record<Method, number> = { example: 1, hint: 1, question: 2, together: 3 };
+
+export type Game = "bar" | "bonds" | "times";
+
+/** A game that teaches the same thing another way, for a child who is stuck; null outside maths. */
+export function gameFor(lesson: Lesson): Game | null {
+  if (lesson.topic !== "other") {
+    if (WORD_TOPICS.includes(lesson.topic)) return "bar";
+    return ["mult", "div", "mult2d"].includes(lesson.topic) ? "times" : "bonds";
+  }
+  if (lesson.subject && lesson.subject !== "math") return null;
+  if (lesson.bar || lesson.own?.kind === "bar") return "bar";
+  return /[×:÷]|умнож|дел|ko‘payt|bo‘l|times|divide/i.test(lesson.task) ? "times" : "bonds";
+}
+
+const WAYS: [Way, Key][] = [
+  ["picture", "wayPicture"],
+  ["steps", "waySteps"],
+  ["rule", "wayRule"],
+  ["guess", "wayGuess"],
+];
+const FEELS: [Feel, Key][] = [
+  ["easy", "feelEasy"],
+  ["ok", "feelOk"],
+  ["hard", "feelHard"],
+];
 
 interface Msg {
   from: "mirodil" | "kid";
@@ -52,12 +79,15 @@ export default function Ladder({
   onDone,
   onNext,
   nextLabel,
+  onGame,
 }: {
   lesson: Lesson;
   grade: Grade;
   onDone: (r: LadderResult) => void;
   onNext?: () => void;
   nextLabel?: string;
+  /** Opens a game when the child is stuck (the ladder offers it after two calls for help). */
+  onGame?: (g: Game) => void;
 }) {
   const lang: Lang = lesson.lang;
   const t = (k: Key) => tr(lang, k);
@@ -78,6 +108,11 @@ export default function Ladder({
   const [solved, setSolved] = useState(false);
   const [paused, setPaused] = useState(false);
   const [otherShown, setOtherShown] = useState(false);
+  // How many times the child went up the ladder (asked for help, said "I don't know", or missed twice).
+  const [ups, setUps] = useState(0);
+  const [way, setWay] = useState<Way | null>(null);
+  const [feel, setFeel] = useState<Feel | null>(null);
+  const game = onGame ? gameFor(lesson) : null;
   const [input, setInput] = useState("");
   const [mood, setMood] = useState<Mood>("happy");
   const reported = useRef(false);
@@ -119,6 +154,7 @@ export default function Ladder({
   /** Moves one rung up the ladder. Never reveals the answer. */
   function stepUp(lead?: Msg) {
     const extra: Msg[] = lead ? [lead] : [];
+    setUps((n) => n + 1);
     setWrong(0);
     setMood("think");
     if (levelIndex === levels.length - 1) {
@@ -157,7 +193,7 @@ export default function Ladder({
     say({
       from: "mirodil",
       good: true,
-      text: `${vary(PRAISE[lang], seed.current++)} ${t(helpUsed === 0 ? "praiseAlone" : helpUsed < 3 ? "praiseAfterHelp" : "praiseTogether")}\n\n${t("whyQuestion")}`,
+      text: `${vary(PRAISE[lang], seed.current++)} ${t(helpUsed === 0 ? "praiseAlone" : helpUsed < 3 ? "praiseAfterHelp" : "praiseTogether")}`,
       sticker: vary(REACTIONS, seed.current++),
     });
     report({ solved: true, maxLevel: helpUsed });
@@ -341,11 +377,45 @@ export default function Ladder({
               🤔 {t("dontKnow")}
             </button>
           </div>
+          {game && (ups >= 2 || paused) && (
+            <button className="btn btn-pink btn-wide" onClick={() => onGame!(game)}>
+              {t("stuckGame")}
+            </button>
+          )}
           {paused && onNext && (
             <button className="btn btn-pink btn-wide" onClick={leave}>
               {nextLabel ?? t("skip")}
             </button>
           )}
+        </div>
+      )}
+
+      {/* Thinking about one's own thinking: how did you solve it, how did it feel (Singapore syllabus: metacognition). */}
+      {solved && !feel && (
+        <div className="card stack reflect">
+          <b>{t(way ? "reflectFeel" : "reflectWay")}</b>
+          <div className="row">
+            {(way ? FEELS : WAYS).map(([k, label]) => (
+              <button
+                key={k}
+                className="btn btn-light btn-small"
+                onClick={() => {
+                  const topic = lesson.topic;
+                  if (!way) {
+                    setWay(k as Way);
+                    recordWay(topic, k as Way);
+                    return;
+                  }
+                  setFeel(k as Feel);
+                  recordFeel(topic, k as Feel);
+                  const reply: Key = way === "guess" ? "afterGuess" : k === "hard" ? "afterHard" : k === "easy" ? "afterEasy" : "afterOk";
+                  say({ from: "mirodil", text: t(reply) });
+                }}
+              >
+                {t(label)}
+              </button>
+            ))}
+          </div>
         </div>
       )}
 

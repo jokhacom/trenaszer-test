@@ -8,7 +8,7 @@ import { recordPhotoTask, recordResult } from "@/lib/progress";
 import type { Drill as DrillData, Grade, Lang, Lesson, Topic } from "@/lib/types";
 import Books from "./Books";
 import Drill from "./Drill";
-import Ladder from "./Ladder";
+import Ladder, { type Game } from "./Ladder";
 import Mirodil from "./Mirodil";
 
 type Stage =
@@ -48,7 +48,19 @@ interface PhotoTask {
 }
 
 /** Photo (or typed) task → "Is this your problem?" → help ladder. */
-export default function PhotoFlow({ lang, grade, ai, onHome }: { lang: Lang; grade: Grade; ai: boolean; onHome: () => void }) {
+export default function PhotoFlow({
+  lang,
+  grade,
+  ai,
+  onHome,
+  onGame,
+}: {
+  lang: Lang;
+  grade: Grade;
+  ai: boolean;
+  onHome: () => void;
+  onGame?: (g: Game) => void;
+}) {
   const t = (k: Key) => tr(lang, k);
   const [stage, setStage] = useState<Stage>({ s: "start" });
   const [photo, setPhoto] = useState<string | null>(null);
@@ -191,6 +203,7 @@ export default function PhotoFlow({ lang, grade, ai, onHome }: { lang: Lang; gra
       <Ladder
         lesson={stage.lesson}
         grade={grade}
+        onGame={onGame}
         onDone={(r) => {
           if (stage.lesson.topic !== "other") recordResult(stage.lesson.topic as Topic, r.solved, r.maxLevel);
           else recordPhotoTask(r.solved, r.maxLevel);

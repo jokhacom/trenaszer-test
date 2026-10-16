@@ -7,7 +7,7 @@ export const runtime = "nodejs";
 
 // Raise when the way lessons are built changes (prompt, pictures): saved
 // lessons of the old kind are then built again instead of reused.
-const LESSON_VERSION = "v2";
+const LESSON_VERSION = "v3";
 // Above the AI time limits in lib/server/ai.ts, so a slow answer ends with a clear error code.
 export const maxDuration = 120;
 

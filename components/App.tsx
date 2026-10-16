@@ -9,6 +9,8 @@ import { avatarsFor, loadRewards, onAward, type Rewards } from "@/lib/rewards";
 import { LANGS, type Grade, type Lang, type Lesson } from "@/lib/types";
 import BarGame from "./BarGame";
 import BondsGame from "./BondsGame";
+import TimesGame from "./TimesGame";
+import type { Game } from "./Ladder";
 import Ladder from "./Ladder";
 import Listen from "./Listen";
 import PhotoFlow from "./PhotoFlow";
@@ -19,7 +21,7 @@ import Mirodil from "./Mirodil";
 import RewardPop from "./RewardPop";
 import RewardsAlbum, { LevelBar } from "./RewardsAlbum";
 
-type Screen = "welcome" | "home" | "photo" | "session" | "bar" | "practice" | "read" | "parents" | "rewards" | "bonds";
+type Screen = "welcome" | "home" | "photo" | "session" | "bar" | "practice" | "read" | "parents" | "rewards" | "bonds" | "times";
 
 const AVATARS = ["🦁", "🐯", "🐼", "🦊", "🐰", "🦉", "🐢", "🐱"];
 const FLAGS: Record<Lang, string> = { uz: "🇺🇿", ru: "🇷🇺", en: "🇬🇧" };
@@ -98,6 +100,8 @@ export default function App() {
   if (!ready) return null;
 
   const home = () => setScreen("home");
+  // A child stuck on a task goes to a game that teaches the same idea another way.
+  const openGame = (g: Game) => setScreen(g === "bar" ? "bar" : g);
 
   return (
     <>
@@ -147,10 +151,11 @@ export default function App() {
           />
         )}
 
+        {profile && screen === "times" && <TimesGame lang={profile.lang} grade={profile.grade} onHome={home} />}
         {profile && screen === "bonds" && <BondsGame lang={profile.lang} grade={profile.grade} onHome={home} />}
         {profile && screen === "rewards" && <RewardsAlbum lang={profile.lang} rewards={rewards} onHome={home} />}
-        {profile && screen === "photo" && <PhotoFlow lang={profile.lang} grade={profile.grade} ai={ai} onHome={home} />}
-        {profile && screen === "session" && <Session lang={profile.lang} grade={profile.grade} onHome={home} />}
+        {profile && screen === "photo" && <PhotoFlow lang={profile.lang} grade={profile.grade} ai={ai} onHome={home} onGame={openGame} />}
+        {profile && screen === "session" && <Session lang={profile.lang} grade={profile.grade} onHome={home} onGame={openGame} />}
         {profile && screen === "read" && <ReadTogether lang={profile.lang} grade={profile.grade} onHome={home} />}
         {profile && screen === "parents" && (
           <ParentReport
@@ -180,6 +185,7 @@ export default function App() {
               key={practice.id}
               lesson={practice}
               grade={profile.grade}
+              onGame={openGame}
               onDone={(r) => practice.topic !== "other" && recordResult(practice.topic, r.solved, r.maxLevel)}
               onNext={() => practice.topic !== "other" && setPractice(makeLesson(practice.topic, profile.lang, profile.grade))}
             />
@@ -317,6 +323,13 @@ function Home({
           <div>
             <b>{tr(lang, "bondsTitle")}</b>
             <span>{tr(lang, "bondsDesc")}</span>
+          </div>
+        </button>
+        <button className="tile tile-times" onClick={() => onOpen("times")}>
+          <span className="emoji">✖️</span>
+          <div>
+            <b>{tr(lang, "timesTitle")}</b>
+            <span>{tr(lang, "timesDesc")}</span>
           </div>
         </button>
         <button className="tile tile-read" onClick={() => onOpen("read")}>

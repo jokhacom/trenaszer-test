@@ -6,6 +6,7 @@ import { makeLesson, TOPIC_NAMES } from "@/lib/problems";
 import { activeDays, loadPhotoStat, loadProgress, loadReading, strongTopics, weakTopics } from "@/lib/progress";
 import type { Grade, Lang, Lesson, Topic } from "@/lib/types";
 import { loadSession } from "@/lib/cloud";
+import { feltHard } from "@/lib/reflect";
 import CloudCard from "./CloudCard";
 import Mirodil from "./Mirodil";
 
@@ -16,6 +17,8 @@ interface Report {
   helped: number;
   days: number;
   stories: number;
+  /** Topics the child calls hard after solving (self-assessment). */
+  feelsHard: Topic[];
 }
 
 function build(grade: Grade): Report {
@@ -31,6 +34,7 @@ function build(grade: Grade): Report {
     helped: Math.max(tries - self, 0),
     days: activeDays(7),
     stories: loadReading().stories,
+    feelsHard: feltHard().filter((x): x is Topic => x in TOPIC_NAMES),
   };
 }
 
@@ -93,6 +97,13 @@ export default function ParentReport({
             <section className="card stack">
               <h2>✅ {t("parentGood")}</h2>
               <p style={{ margin: 0 }}>{names(r.strong)}</p>
+            </section>
+          )}
+
+          {r.feelsHard.length > 0 && (
+            <section className="card stack">
+              <h2>💬 {t("parentFeelsHard")}</h2>
+              <p style={{ margin: 0 }}>{names(r.feelsHard)}</p>
             </section>
           )}
 

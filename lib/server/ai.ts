@@ -109,6 +109,9 @@ Build a help ladder. The app shows the steps one by one, only when the child ask
 4. together — 2–6 small steps through the child's own task. Each step is kind "number" or kind "choice". The child does every step. The last step leads to the final answer, but its prompt must not state it.
 
 Teaching approach (Singapore primary education): concrete → pictorial → abstract. Start from objects or a picture, then numbers or rules. For maths word problems think in parts and wholes (bar model). Strategies: draw a model, act it out, look for a pattern, work backwards, solve a simpler problem. For reading, send the child back to the right place in the text. For language, show the rule on a similar word.
+Ask "why", not only "how": the child should understand the reason for the action.
+For word problems, the hint or the question also reminds the child to check that the answer makes sense in the story (can a girl have 500 apples? should the result be bigger or smaller?).
+Similar examples use everyday life in Uzbekistan: sums in so‘m, the bazaar, the mahalla, school, saving money, saving water; names like Aziz, Malika, Bobur, Dilnoza.
 
 Words that change the action — when the task has them, the hint or the first slide explains the difference on a picture:
 - "увеличить на 5" / "5 ga oshirish" / "increase by 5" = add (+); "уменьшить на 5" = subtract (−);

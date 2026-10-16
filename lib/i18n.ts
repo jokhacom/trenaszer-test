@@ -171,7 +171,14 @@ const S = {
     ru: "Задач решено самостоятельно:",
     en: "Problems you solved yourself:",
   },
-  comeTomorrow: { uz: "Ertaga yana kel!", ru: "Приходи завтра!", en: "Come back tomorrow!" },
+  comeTomorrow: { uz: "Ko‘rishguncha! Xohlagan paytingda kel.", ru: "До встречи! Приходи, когда захочешь.", en: "See you! Come back whenever you like." },
+  summaryPractised: { uz: "Bugun mashq qildik:", ru: "Сегодня потренировали:", en: "Today we practised:" },
+  summaryNext: { uz: "Keyingi safar: {topic}", ru: "В следующий раз: {topic}", en: "Next time: {topic}" },
+  warmUp: {
+    uz: "Badantarbiya: avval yangi mavzu uchun kerakli narsani eslaymiz.",
+    ru: "Разминка: сначала вспомним то, что нужно для новой темы.",
+    en: "Warm-up: first let's recall what the new topic needs.",
+  },
   timeUp: {
     uz: "10 daqiqa o‘tdi — bugun yetarli. Zo‘r ishlading!",
     ru: "10 минут прошли — на сегодня хватит. Отличная работа!",
@@ -215,6 +222,44 @@ const S = {
     ru: "Наверху — целое число. Внизу — две его части. Вместе части дают целое.",
     en: "On top is the whole. Below are its two parts. Together the parts make the whole.",
   },
+
+  // After a solved task: how the child solved it and how it felt
+  reflectWay: { uz: "Qanday yechding?", ru: "Как ты решал?", en: "How did you solve it?" },
+  wayPicture: { uz: "🖼️ Rasmni tasavvur qildim", ru: "🖼️ Представил картинку", en: "🖼️ Pictured it" },
+  waySteps: { uz: "🪜 Qadamma-qadam", ru: "🪜 По шагам", en: "🪜 Step by step" },
+  wayRule: { uz: "📏 Qoidani esladim", ru: "📏 Вспомнил правило", en: "📏 Used a rule" },
+  wayGuess: { uz: "🎲 Taxmin qildim", ru: "🎲 Угадал", en: "🎲 Guessed" },
+  reflectFeel: { uz: "Qanday bo‘ldi?", ru: "А как было?", en: "How was it?" },
+  feelEasy: { uz: "😊 Oson", ru: "😊 Легко", en: "😊 Easy" },
+  feelOk: { uz: "🙂 Yaxshi", ru: "🙂 Нормально", en: "🙂 OK" },
+  feelHard: { uz: "😓 Qiyin", ru: "😓 Трудно", en: "😓 Hard" },
+  afterGuess: {
+    uz: "Taxmin ham bir qadam. Endi tekshir: javobingni masalaga qo‘yib ko‘r — hammasi to‘g‘ri keladimi?",
+    ru: "Угадать — тоже шаг. А теперь проверь: подставь свой ответ в задачу — всё сходится?",
+    en: "Guessing is a start. Now check: put your answer back into the task — does it all fit?",
+  },
+  afterHard: {
+    uz: "Qiyin bo‘lsa — demak, sen o‘syapsan. Keyingi safar osonroq bo‘ladi.",
+    ru: "Трудно — значит, ты растёшь. В следующий раз будет легче.",
+    en: "Hard means you are growing. Next time will be easier.",
+  },
+  afterEasy: { uz: "Zo‘r! Demak, qiyinroq masalalarga tayyorsan.", ru: "Отлично! Значит, ты готов к задачам посложнее.", en: "Great! Then you are ready for harder ones." },
+  afterOk: { uz: "Aytganing uchun rahmat!", ru: "Спасибо, что рассказал!", en: "Thanks for telling me!" },
+  stuckGame: { uz: "🎮 Keling, boshqacha — o‘yinda urinib ko‘ramiz", ru: "🎮 Давай попробуем по-другому — в игре", en: "🎮 Let's try another way — a game" },
+
+  // Times tables ({a}, {b}, {a1}, {c} are filled in by the app)
+  timesTitle: { uz: "Ko‘paytirish jadvali", ru: "Таблица умножения", en: "Times tables" },
+  timesDesc: { uz: "O‘yin: guruhlar va misollar", ru: "Игра: группы и примеры", en: "Game: groups and facts" },
+  timesPick: { uz: "Qaysi jadvalni mashq qilamiz?", ru: "Какую таблицу тренируем?", en: "Which table shall we practise?" },
+  timesAll: { uz: "Hammasi", ru: "Все", en: "All" },
+  timesHintMul: {
+    uz: "{a} × {b}: {b} ni {a} marta ol. {a1} × {b} ni bilsang, yana {b} qo‘sh.",
+    ru: "{a} × {b}: возьми {b} столько раз, сколько показывает {a}. Если знаешь {a1} × {b}, прибавь ещё {b}.",
+    en: "{a} × {b}: take {b}, {a} times. If you know {a1} × {b}, add one more {b}.",
+  },
+  timesHintOne: { uz: "Bitta guruhga qara: unda nechta?", ru: "Посмотри на одну группу: сколько в ней?", en: "Look at one group: how many are in it?" },
+  timesHintDiv: { uz: "Qaysi sonni {b} ga ko‘paytirsak, {c} chiqadi?", ru: "Какое число умножить на {b}, чтобы получилось {c}?", en: "Which number times {b} makes {c}?" },
+  timesAgain: { uz: "Qiyin bo‘lgan misollarni takrorlaymiz", ru: "Повторим примеры, где была ошибка", en: "Let's repeat the tricky facts" },
 
   // Rewards ({n}, {level} are filled in by the app)
   rewardsTitle: { uz: "Mening sovg‘alarim", ru: "Мои награды", en: "My rewards" },
@@ -377,6 +422,7 @@ const S = {
     ru: "Данные хранятся только на этом устройстве.",
     en: "Data is stored only on this device.",
   },
+  parentFeelsHard: { uz: "O‘zi qiyin deydi:", ru: "Сам говорит, что трудно:", en: "Says it is hard:" },
   parentPrivacyCloud: {
     uz: "Ma’lumotlar shu qurilmada va Mirodil bulutida saqlanadi. Ularni faqat siz ko‘rasiz.",
     ru: "Данные хранятся на этом устройстве и в облаке Mirodil. Их видите только вы.",
