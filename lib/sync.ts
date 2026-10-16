@@ -2,6 +2,7 @@
 // progress from this phone and the progress already in the cloud (from
 // another phone, or from before the parent logged in).
 
+import { mergeHistory, type HistoryEntry } from "./history";
 import type { TopicStat } from "./progress";
 
 /** localStorage keys that travel to the cloud. */
@@ -14,6 +15,7 @@ export const SYNCED_KEYS = [
   "mirodil:rewards",
   "mirodil:methods",
   "mirodil:reflect",
+  "mirodil:history",
 ] as const;
 
 export type Snapshot = Partial<Record<(typeof SYNCED_KEYS)[number], unknown>>;
@@ -67,6 +69,14 @@ export function merge(local: Snapshot, remote: Snapshot): Snapshot {
   for (const key of ["mirodil:reading", "mirodil:photo"] as const) {
     const m = maxCounts(local[key], remote[key]);
     if (m) out[key] = m;
+  }
+
+  // "My tasks": one entry per task, newest first.
+  const lh = local["mirodil:history"];
+  const rh = remote["mirodil:history"];
+  if (Array.isArray(lh) || Array.isArray(rh)) {
+    const joined = mergeHistory(Array.isArray(lh) ? (lh as HistoryEntry[]) : [], Array.isArray(rh) ? (rh as HistoryEntry[]) : []);
+    if (joined.length) out["mirodil:history"] = joined;
   }
 
   const days = [...new Set([...((local["mirodil:days"] as string[]) ?? []), ...((remote["mirodil:days"] as string[]) ?? [])])]

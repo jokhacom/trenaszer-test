@@ -12,7 +12,15 @@ const LESSON_VERSION = "v3";
 export const maxDuration = 120;
 
 export async function POST(req: Request) {
-  const body = (await req.json().catch(() => null)) as { text?: string; lang?: string; grade?: number; image?: string; mode?: string } | null;
+  const body = (await req.json().catch(() => null)) as {
+    text?: string;
+    lang?: string;
+    grade?: number;
+    image?: string;
+    mode?: string;
+    /** The saved lesson's key from "My tasks": open it again without the AI. */
+    key?: string;
+  } | null;
   // "drill": an exercise with many gaps of one kind → one rule + a mini-game.
   const drill = body?.mode === "drill";
   const text = body?.text?.trim().slice(0, drill ? 4000 : 1500);
@@ -24,10 +32,14 @@ export async function POST(req: Request) {
   const local = drill ? null : lessonFromExample(text, lang, grade);
   if (local) return Response.json({ lesson: local });
 
-  // 2. A task some child already sent: reuse the saved ladder.
+  // 2. A task opened again from "My tasks": the exact lesson saved then, even
+  //    after a newer version of lessons. Then a task some child already sent.
+  const kind = drill ? "drill" : "lesson";
+  const saved = typeof body?.key === "string" && body.key.length <= 5000 ? await getLesson(body.key) : undefined;
+  if (saved && (("items" in saved) === drill)) return Response.json({ [kind]: saved, key: body!.key, cached: true });
   const key = `${LESSON_VERSION}|${drill ? "drill|" : ""}${fingerprint(text, lang, grade)}`;
   const cached = await getLesson(key);
-  if (cached) return Response.json({ [drill ? "drill" : "lesson"]: cached, cached: true });
+  if (cached) return Response.json({ [kind]: cached, key, cached: true });
 
   // 3. A new task: ask the AI once and save the result.
   if (!aiEnabled()) return Response.json({ error: "ai_off" }, { status: 503 });
@@ -40,12 +52,12 @@ export async function POST(req: Request) {
       const result = await buildDrill(text, lang, grade, image);
       if (!result.ok) return Response.json({ error: "unsupported", reason: result.reason }, { status: 422 });
       await putLesson(key, result.drill);
-      return Response.json({ drill: result.drill });
+      return Response.json({ drill: result.drill, key });
     }
     const result = await buildLesson(text, lang, grade, image);
     if (!result.ok) return Response.json({ error: "unsupported", reason: result.reason }, { status: 422 });
     await putLesson(key, result.lesson);
-    return Response.json({ lesson: result.lesson });
+    return Response.json({ lesson: result.lesson, key });
   } catch (e) {
     console.error("lesson failed", e);
     const error = e instanceof AiError ? e.message : "ai_error";
