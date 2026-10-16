@@ -5,8 +5,12 @@ import { gradeLabel, LANG_NAMES, tr } from "@/lib/i18n";
 import { makeLesson, TOPIC_NAMES } from "@/lib/problems";
 import { loadSession, startAutoSave, syncNow, takeLoginFromLink } from "@/lib/cloud";
 import { loadProfile, recordResult, saveProfile, weakTopics, type Profile } from "@/lib/progress";
+import { avatarsFor, loadRewards, onAward, type Rewards } from "@/lib/rewards";
 import { LANGS, type Grade, type Lang, type Lesson } from "@/lib/types";
 import BarGame from "./BarGame";
+import BondsGame from "./BondsGame";
+import TimesGame from "./TimesGame";
+import type { Game } from "./Ladder";
 import Ladder from "./Ladder";
 import Listen from "./Listen";
 import PhotoFlow from "./PhotoFlow";
@@ -14,8 +18,10 @@ import ParentReport from "./ParentReport";
 import ReadTogether from "./ReadTogether";
 import Session from "./Session";
 import Mirodil from "./Mirodil";
+import RewardPop from "./RewardPop";
+import RewardsAlbum, { LevelBar } from "./RewardsAlbum";
 
-type Screen = "welcome" | "home" | "photo" | "session" | "bar" | "practice" | "read" | "parents";
+type Screen = "welcome" | "home" | "photo" | "session" | "bar" | "practice" | "read" | "parents" | "rewards" | "bonds" | "times";
 
 const AVATARS = ["🦁", "🐯", "🐼", "🦊", "🐰", "🦉", "🐢", "🐱"];
 const FLAGS: Record<Lang, string> = { uz: "🇺🇿", ru: "🇷🇺", en: "🇬🇧" };
@@ -28,6 +34,13 @@ export default function App() {
   const [practice, setPractice] = useState<Lesson | null>(null);
   const [cloud, setCloud] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
+  const [rewards, setRewards] = useState<Rewards>({ candies: 0 });
+
+  // Candies on the top bar follow every award.
+  useEffect(() => {
+    setRewards(loadRewards());
+    return onAward(() => setRewards(loadRewards()));
+  }, []);
 
   useEffect(() => {
     const p = loadProfile();
@@ -56,6 +69,7 @@ export default function App() {
         syncNow().then((r) => {
           const synced = loadProfile();
           if (synced) setProfile(synced);
+          setRewards(loadRewards());
           if (login === "ok" && r) {
             setNotice(tr(synced?.lang ?? lang, "cloudWelcome"));
             setScreen(synced ? "parents" : "welcome");
@@ -86,6 +100,8 @@ export default function App() {
   if (!ready) return null;
 
   const home = () => setScreen("home");
+  // A child stuck on a task goes to a game that teaches the same idea another way.
+  const openGame = (g: Game) => setScreen(g === "bar" ? "bar" : g);
 
   return (
     <>
@@ -100,15 +116,21 @@ export default function App() {
                 <small>{tr(profile.lang, "tagline")}</small>
               </span>
             </button>
-            <button className="chip" onClick={() => setScreen("welcome")} aria-label={tr(profile.lang, "settings")}>
-              {profile.avatar} {gradeLabel(profile.lang, profile.grade)} · {FLAGS[profile.lang]}
-            </button>
+            <div className="row" style={{ gap: 6, flexWrap: "nowrap" }}>
+              <button className="chip" onClick={() => setScreen("rewards")} aria-label={tr(profile.lang, "rewardsTitle")}>
+                🍬 {rewards.candies}
+              </button>
+              <button className="chip" onClick={() => setScreen("welcome")} aria-label={tr(profile.lang, "settings")}>
+                {profile.avatar} <span className="chip-grade">{gradeLabel(profile.lang, profile.grade)} ·</span> {FLAGS[profile.lang]}
+              </button>
+            </div>
           </header>
         )}
 
         {screen === "welcome" && (
           <Welcome
             initial={profile}
+            extraAvatars={avatarsFor(rewards.candies)}
             onStart={(p) => {
               saveProfile(p);
               setProfile(p);
@@ -120,6 +142,7 @@ export default function App() {
         {profile && screen === "home" && (
           <Home
             profile={profile}
+            rewards={rewards}
             onOpen={setScreen}
             onPractice={(lesson) => {
               setPractice(lesson);
@@ -128,8 +151,11 @@ export default function App() {
           />
         )}
 
-        {profile && screen === "photo" && <PhotoFlow lang={profile.lang} grade={profile.grade} ai={ai} onHome={home} />}
-        {profile && screen === "session" && <Session lang={profile.lang} grade={profile.grade} onHome={home} />}
+        {profile && screen === "times" && <TimesGame lang={profile.lang} grade={profile.grade} onHome={home} />}
+        {profile && screen === "bonds" && <BondsGame lang={profile.lang} grade={profile.grade} onHome={home} />}
+        {profile && screen === "rewards" && <RewardsAlbum lang={profile.lang} rewards={rewards} onHome={home} />}
+        {profile && screen === "photo" && <PhotoFlow lang={profile.lang} grade={profile.grade} ai={ai} onHome={home} onGame={openGame} />}
+        {profile && screen === "session" && <Session lang={profile.lang} grade={profile.grade} onHome={home} onGame={openGame} />}
         {profile && screen === "read" && <ReadTogether lang={profile.lang} grade={profile.grade} onHome={home} />}
         {profile && screen === "parents" && (
           <ParentReport
@@ -159,6 +185,7 @@ export default function App() {
               key={practice.id}
               lesson={practice}
               grade={profile.grade}
+              onGame={openGame}
               onDone={(r) => practice.topic !== "other" && recordResult(practice.topic, r.solved, r.maxLevel)}
               onNext={() => practice.topic !== "other" && setPractice(makeLesson(practice.topic, profile.lang, profile.grade))}
             />
@@ -168,11 +195,21 @@ export default function App() {
           </div>
         )}
       </main>
+      {profile && <RewardPop lang={profile.lang} />}
     </>
   );
 }
 
-function Welcome({ initial, onStart }: { initial: Profile | null; onStart: (p: Profile) => void }) {
+function Welcome({
+  initial,
+  extraAvatars,
+  onStart,
+}: {
+  initial: Profile | null;
+  /** Avatars unlocked with a level (bronze, silver, gold). */
+  extraAvatars: string[];
+  onStart: (p: Profile) => void;
+}) {
   const [lang, setLang] = useState<Lang>(initial?.lang ?? "uz");
   const [avatar, setAvatar] = useState(initial?.avatar ?? AVATARS[0]);
   const [grade, setGrade] = useState<Grade>(initial?.grade ?? 2);
@@ -205,7 +242,7 @@ function Welcome({ initial, onStart }: { initial: Profile | null; onStart: (p: P
       <section className="card stack">
         <h2>{tr(lang, "chooseAvatar")}</h2>
         <div className="pick-grid">
-          {AVATARS.map((a) => (
+          {[...AVATARS, ...extraAvatars].map((a) => (
             <button key={a} className={`pick${a === avatar ? " on" : ""}`} onClick={() => setAvatar(a)} aria-pressed={a === avatar}>
               <span className="big">{a}</span>
             </button>
@@ -233,10 +270,12 @@ function Welcome({ initial, onStart }: { initial: Profile | null; onStart: (p: P
 
 function Home({
   profile,
+  rewards,
   onOpen,
   onPractice,
 }: {
   profile: Profile;
+  rewards: Rewards;
   onOpen: (s: Screen) => void;
   onPractice: (l: Lesson) => void;
 }) {
@@ -254,6 +293,8 @@ function Home({
           </b>
         </div>
       </div>
+
+      <LevelBar lang={lang} rewards={rewards} onOpen={() => onOpen("rewards")} />
 
       <div className="tiles">
         <button className="tile tile-photo" onClick={() => onOpen("photo")}>
@@ -275,6 +316,20 @@ function Home({
           <div>
             <b>{tr(lang, "barTitle")}</b>
             <span>{tr(lang, "barDesc")}</span>
+          </div>
+        </button>
+        <button className="tile tile-bonds" onClick={() => onOpen("bonds")}>
+          <span className="emoji">🏠</span>
+          <div>
+            <b>{tr(lang, "bondsTitle")}</b>
+            <span>{tr(lang, "bondsDesc")}</span>
+          </div>
+        </button>
+        <button className="tile tile-times" onClick={() => onOpen("times")}>
+          <span className="emoji">✖️</span>
+          <div>
+            <b>{tr(lang, "timesTitle")}</b>
+            <span>{tr(lang, "timesDesc")}</span>
           </div>
         </button>
         <button className="tile tile-read" onClick={() => onOpen("read")}>

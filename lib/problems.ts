@@ -776,6 +776,60 @@ export const TOPIC_NAMES: Record<Topic, Tr> = {
   mult2d: { uz: "Ikki xonali sonni ko‘paytirish", ru: "Умножение двузначного числа", en: "Multiplying a two-digit number" },
 };
 
+/** Another way to solve, shown after the child solved it (Singapore: more than one strategy). */
+export const OTHER_WAY: Record<Topic, Tr> = {
+  add10: {
+    uz: "Boshqa yo‘l: kattaroq sondan boshlab sanash. Masalan, 8 + 5: 9, 10, 11, 12, 13.",
+    ru: "Другой способ: считать от большего числа. Например, 8 + 5: 9, 10, 11, 12, 13.",
+    en: "Another way: count on from the bigger number. For example, 8 + 5: 9, 10, 11, 12, 13.",
+  },
+  addCarry: {
+    uz: "Boshqa yo‘l: o‘nlikni to‘ldirish. 38 + 5 = 38 + 2 + 3 = 40 + 3.",
+    ru: "Другой способ: дополнить до десятка. 38 + 5 = 38 + 2 + 3 = 40 + 3.",
+    en: "Another way: make a ten first. 38 + 5 = 38 + 2 + 3 = 40 + 3.",
+  },
+  subBorrow: {
+    uz: "Boshqa yo‘l: qismlab ayirish. 52 − 7 = 52 − 2 − 5 = 50 − 5.",
+    ru: "Другой способ: вычитать по частям. 52 − 7 = 52 − 2 − 5 = 50 − 5.",
+    en: "Another way: take away in parts. 52 − 7 = 52 − 2 − 5 = 50 − 5.",
+  },
+  wordTotal: {
+    uz: "Boshqa yo‘l: kesmani chizish — ikki bo‘lak, hammasi esa «?».",
+    ru: "Другой способ: нарисовать отрезок из двух частей, а над всем отрезком поставить «?».",
+    en: "Another way: draw a bar with two parts and put “?” over the whole bar.",
+  },
+  wordRemain: {
+    uz: "Boshqa yo‘l: tekshirish — qolganini va ketganini qo‘shsang, boshidagi son chiqadi.",
+    ru: "Другой способ: проверка сложением — оставшееся плюс ушедшее даёт то, что было.",
+    en: "Another way: check by adding — what is left plus what went away gives what you had.",
+  },
+  wordMore: {
+    uz: "Boshqa yo‘l: ikki kesmani bir-birining ostiga chizish. Ortiqcha bo‘lak — farq.",
+    ru: "Другой способ: нарисовать два отрезка друг под другом. Лишний кусочек — это разница.",
+    en: "Another way: draw two bars one under the other. The extra piece is the difference.",
+  },
+  wordLess: {
+    uz: "Boshqa yo‘l: ikki kesmani solishtirish — qisqasi qancha kam ekanini ko‘rsat.",
+    ru: "Другой способ: сравнить два отрезка — покажи, на сколько короче второй.",
+    en: "Another way: compare two bars — show how much shorter the second one is.",
+  },
+  mult: {
+    uz: "Boshqa yo‘l: bir xil guruhlarni qo‘shish. 4 × 3 = 4 + 4 + 4.",
+    ru: "Другой способ: сложить одинаковые группы. 4 × 3 = 4 + 4 + 4.",
+    en: "Another way: add equal groups. 4 × 3 = 4 + 4 + 4.",
+  },
+  div: {
+    uz: "Boshqa yo‘l: ko‘paytirish orqali tekshirish. 12 : 3 — qaysi son 3 ga ko‘paytirilsa 12 bo‘ladi?",
+    ru: "Другой способ: проверить умножением. 12 : 3 — какое число, умноженное на 3, даёт 12?",
+    en: "Another way: check with multiplication. 12 ÷ 3 — which number times 3 makes 12?",
+  },
+  mult2d: {
+    uz: "Boshqa yo‘l: o‘nliklar va birliklarga ajratish. 23 × 4 = 20 × 4 + 3 × 4.",
+    ru: "Другой способ: разложить на десятки и единицы. 23 × 4 = 20 × 4 + 3 × 4.",
+    en: "Another way: split into tens and ones. 23 × 4 = 20 × 4 + 3 × 4.",
+  },
+};
+
 function build<P>(spec: Spec<P>, p: P, lang: Lang, r: Rng, grade: Grade): Lesson {
   const answer = spec.answer(p);
   // A similar example: same kind of task, different numbers, answer not shown anywhere.
@@ -798,6 +852,7 @@ function build<P>(spec: Spec<P>, p: P, lang: Lang, r: Rng, grade: Grade): Lesson
     exampleFrames: spec.frames?.(ex, lang),
     own: spec.own?.(p, lang),
     together: spec.together(p, lang),
+    otherWay: OTHER_WAY[spec.topic][lang],
     bar: spec.bar?.(p, lang),
     source: "local",
   };

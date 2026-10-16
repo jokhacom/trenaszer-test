@@ -5,7 +5,16 @@
 import type { TopicStat } from "./progress";
 
 /** localStorage keys that travel to the cloud. */
-export const SYNCED_KEYS = ["mirodil:profile", "mirodil:progress", "mirodil:reading", "mirodil:days", "mirodil:photo"] as const;
+export const SYNCED_KEYS = [
+  "mirodil:profile",
+  "mirodil:progress",
+  "mirodil:reading",
+  "mirodil:days",
+  "mirodil:photo",
+  "mirodil:rewards",
+  "mirodil:methods",
+  "mirodil:reflect",
+] as const;
 
 export type Snapshot = Partial<Record<(typeof SYNCED_KEYS)[number], unknown>>;
 
@@ -34,6 +43,26 @@ export function merge(local: Snapshot, remote: Snapshot): Snapshot {
     progress[topic] = maxCounts(lp[topic], rp[topic])!;
   }
   if (Object.keys(progress).length) out["mirodil:progress"] = progress;
+
+  // Candies only grow, so the larger count is right; the later bonus day too.
+  const lr = local["mirodil:rewards"] as { candies?: number; bonusDay?: string } | undefined;
+  const rr = remote["mirodil:rewards"] as { candies?: number; bonusDay?: string } | undefined;
+  if (lr || rr) {
+    const days = [lr?.bonusDay, rr?.bonusDay].filter((d): d is string => typeof d === "string").sort();
+    out["mirodil:rewards"] = {
+      candies: Math.max(Number(lr?.candies) || 0, Number(rr?.candies) || 0),
+      ...(days.length ? { bonusDay: days[days.length - 1] } : {}),
+    };
+  }
+
+  // Counts per kind of help, and the child's own "how I solved it / how it felt".
+  for (const key of ["mirodil:methods", "mirodil:reflect"] as const) {
+    const l = (local[key] ?? {}) as Record<string, Counts>;
+    const r = (remote[key] ?? {}) as Record<string, Counts>;
+    const joined: Record<string, Counts> = {};
+    for (const m of new Set([...Object.keys(l), ...Object.keys(r)])) joined[m] = maxCounts(l[m], r[m])!;
+    if (Object.keys(joined).length) out[key] = joined;
+  }
 
   for (const key of ["mirodil:reading", "mirodil:photo"] as const) {
     const m = maxCounts(local[key], remote[key]);

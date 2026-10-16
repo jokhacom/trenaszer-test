@@ -109,6 +109,9 @@ Build a help ladder. The app shows the steps one by one, only when the child ask
 4. together — 2–6 small steps through the child's own task. Each step is kind "number" or kind "choice". The child does every step. The last step leads to the final answer, but its prompt must not state it.
 
 Teaching approach (Singapore primary education): concrete → pictorial → abstract. Start from objects or a picture, then numbers or rules. For maths word problems think in parts and wholes (bar model). Strategies: draw a model, act it out, look for a pattern, work backwards, solve a simpler problem. For reading, send the child back to the right place in the text. For language, show the rule on a similar word.
+Ask "why", not only "how": the child should understand the reason for the action.
+For word problems, the hint or the question also reminds the child to check that the answer makes sense in the story (can a girl have 500 apples? should the result be bigger or smaller?).
+Similar examples use everyday life in Uzbekistan: sums in so‘m, the bazaar, the mahalla, school, saving money, saving water; names like Aziz, Malika, Bobur, Dilnoza.
 
 Words that change the action — when the task has them, the hint or the first slide explains the difference on a picture:
 - "увеличить на 5" / "5 ga oshirish" / "increase by 5" = add (+); "уменьшить на 5" = subtract (−);
@@ -119,6 +122,8 @@ Pictures (picture objects; kind "none" only when a picture cannot help). In math
 - "objects": up to 30 small objects; a and b are two groups; emoji is one emoji for the object.
 - "groups": multiplication or division; a groups with b objects each; emoji for the object.
 own_picture shows the child's own task and must never show its answer. Each example slide may have a picture of the example.
+
+other_way: shown only AFTER the child has solved the task. Another way to solve the same task in 1–3 short sentences (count on vs make a ten; a bar model vs an equation; check with the opposite operation). Singapore teaches more than one strategy. Empty when there is no other sensible way.
 
 Also return:
 - task: the task text, cleaned up, in the output language.
@@ -207,10 +212,11 @@ const LESSON_SCHEMA = {
     },
     together: { type: "array", items: STEP_SCHEMA },
     own_picture: PICTURE_SCHEMA,
+    other_way: { type: "string" },
   },
   required: [
     "supported", "reason", "subject", "task", "topic", "answer_kind", "answer_number", "solution_expression",
-    "choices", "correct_choice", "accepted", "hint", "question", "example_frames", "together", "own_picture",
+    "choices", "correct_choice", "accepted", "hint", "question", "example_frames", "together", "own_picture", "other_way",
   ],
   additionalProperties: false,
 };
@@ -424,6 +430,7 @@ export interface RawLesson {
   example_frames: { text: string; picture: RawPicture }[];
   together: RawStep[];
   own_picture: RawPicture;
+  other_way?: string;
 }
 
 const GENERIC_HINT: Record<Lang, string> = {
@@ -576,6 +583,8 @@ export function checkLesson(raw: RawLesson, lang: Lang): LessonResult {
       exampleFrames: frames.length >= 2 ? frames : undefined,
       own,
       together,
+      // Shown after the child solved it, so it may use the task's numbers.
+      otherWay: raw.other_way?.trim() ? tidy(raw.other_way.trim()) : undefined,
       source: "ai",
     },
   };

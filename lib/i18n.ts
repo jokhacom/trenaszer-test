@@ -160,6 +160,7 @@ const S = {
   },
   another: { uz: "Yana masala", ru: "Ещё задача", en: "Another problem" },
   next: { uz: "Keyingisi", ru: "Дальше", en: "Next" },
+  again: { uz: "Yana bir bor", ru: "Ещё раз", en: "Again" },
   home: { uz: "Bosh sahifa", ru: "На главную", en: "Home" },
   back: { uz: "Orqaga", ru: "Назад", en: "Back" },
 
@@ -170,13 +171,120 @@ const S = {
     ru: "Задач решено самостоятельно:",
     en: "Problems you solved yourself:",
   },
-  comeTomorrow: { uz: "Ertaga yana kel!", ru: "Приходи завтра!", en: "Come back tomorrow!" },
+  comeTomorrow: { uz: "Ko‘rishguncha! Xohlagan paytingda kel.", ru: "До встречи! Приходи, когда захочешь.", en: "See you! Come back whenever you like." },
+  summaryPractised: { uz: "Bugun mashq qildik:", ru: "Сегодня потренировали:", en: "Today we practised:" },
+  summaryNext: { uz: "Keyingi safar: {topic}", ru: "В следующий раз: {topic}", en: "Next time: {topic}" },
+  warmUp: {
+    uz: "Badantarbiya: avval yangi mavzu uchun kerakli narsani eslaymiz.",
+    ru: "Разминка: сначала вспомним то, что нужно для новой темы.",
+    en: "Warm-up: first let's recall what the new topic needs.",
+  },
   timeUp: {
     uz: "10 daqiqa o‘tdi — bugun yetarli. Zo‘r ishlading!",
     ru: "10 минут прошли — на сегодня хватит. Отличная работа!",
     en: "10 minutes are up — that's enough for today. Great work!",
   },
   skip: { uz: "Boshqa masala", ru: "Другая задача", en: "Another problem" },
+
+  otherWayAsk: { uz: "Yana qanday yechish mumkin?", ru: "А как ещё можно решить?", en: "How else can we solve it?" },
+  // Praise for what the child did (process), not "you are clever".
+  praiseAlone: {
+    uz: "Sen o‘zing, yordamsiz yechding.",
+    ru: "Ты решил сам, без подсказок.",
+    en: "You solved it on your own, with no hints.",
+  },
+  praiseAfterHelp: {
+    uz: "Qiyin edi, lekin sen to‘xtamading va javobni o‘zing topding.",
+    ru: "Было трудно, но ты не сдался и сам нашёл ответ.",
+    en: "It was hard, but you kept going and found the answer yourself.",
+  },
+  praiseTogether: {
+    uz: "Har bir qadamni o‘zing qilding — mana shunday o‘rganiladi.",
+    ru: "Каждый шаг ты сделал сам — так и учатся.",
+    en: "You did every step yourself — that is how we learn.",
+  },
+  otherWayTitle: { uz: "Boshqa yo‘l", ru: "Другой способ", en: "Another way" },
+
+  // Number bonds ({a}, {whole}, {i}, {n} are filled in by the app)
+  bondsTitle: { uz: "Son uychalari", ru: "Числовые домики", en: "Number bonds" },
+  bondsDesc: { uz: "Son qaysi qismlardan iborat?", ru: "Из каких частей число?", en: "Which parts make the number?" },
+  bondsAsk: { uz: "Bo‘sh doirachaga qaysi son kerak?", ru: "Какое число в пустом кружке?", en: "Which number goes in the empty circle?" },
+  bondsRound: { uz: "{n} tadan {i}-uycha", ru: "Домик {i} из {n}", en: "House {i} of {n}" },
+  bondsHintDots: { uz: "Rangsiz doirachalarni sana.", ru: "Посчитай кружки без цвета.", en: "Count the circles without colour." },
+  bondsHintPart: {
+    uz: "O‘ylab ko‘r: {a} va yana qancha birga {whole} bo‘ladi?",
+    ru: "Подумай: {a} и сколько ещё вместе дают {whole}?",
+    en: "Think: {a} and how many more make {whole}?",
+  },
+  bondsHintWhole: { uz: "Ikki qismni qo‘sh.", ru: "Сложи две части.", en: "Join the two parts." },
+  bondsRule: {
+    uz: "Tepada — butun son. Pastda — uning ikki qismi. Ikki qism birga butunni beradi.",
+    ru: "Наверху — целое число. Внизу — две его части. Вместе части дают целое.",
+    en: "On top is the whole. Below are its two parts. Together the parts make the whole.",
+  },
+
+  // After a solved task: how the child solved it and how it felt
+  reflectWay: { uz: "Qanday yechding?", ru: "Как ты решал?", en: "How did you solve it?" },
+  wayPicture: { uz: "🖼️ Rasmni tasavvur qildim", ru: "🖼️ Представил картинку", en: "🖼️ Pictured it" },
+  waySteps: { uz: "🪜 Qadamma-qadam", ru: "🪜 По шагам", en: "🪜 Step by step" },
+  wayRule: { uz: "📏 Qoidani esladim", ru: "📏 Вспомнил правило", en: "📏 Used a rule" },
+  wayGuess: { uz: "🎲 Taxmin qildim", ru: "🎲 Угадал", en: "🎲 Guessed" },
+  reflectFeel: { uz: "Qanday bo‘ldi?", ru: "А как было?", en: "How was it?" },
+  feelEasy: { uz: "😊 Oson", ru: "😊 Легко", en: "😊 Easy" },
+  feelOk: { uz: "🙂 Yaxshi", ru: "🙂 Нормально", en: "🙂 OK" },
+  feelHard: { uz: "😓 Qiyin", ru: "😓 Трудно", en: "😓 Hard" },
+  afterGuess: {
+    uz: "Taxmin ham bir qadam. Endi tekshir: javobingni masalaga qo‘yib ko‘r — hammasi to‘g‘ri keladimi?",
+    ru: "Угадать — тоже шаг. А теперь проверь: подставь свой ответ в задачу — всё сходится?",
+    en: "Guessing is a start. Now check: put your answer back into the task — does it all fit?",
+  },
+  afterHard: {
+    uz: "Qiyin bo‘lsa — demak, sen o‘syapsan. Keyingi safar osonroq bo‘ladi.",
+    ru: "Трудно — значит, ты растёшь. В следующий раз будет легче.",
+    en: "Hard means you are growing. Next time will be easier.",
+  },
+  afterEasy: { uz: "Zo‘r! Demak, qiyinroq masalalarga tayyorsan.", ru: "Отлично! Значит, ты готов к задачам посложнее.", en: "Great! Then you are ready for harder ones." },
+  afterOk: { uz: "Aytganing uchun rahmat!", ru: "Спасибо, что рассказал!", en: "Thanks for telling me!" },
+  stuckGame: { uz: "🎮 Keling, boshqacha — o‘yinda urinib ko‘ramiz", ru: "🎮 Давай попробуем по-другому — в игре", en: "🎮 Let's try another way — a game" },
+
+  // Times tables ({a}, {b}, {a1}, {c} are filled in by the app)
+  timesTitle: { uz: "Ko‘paytirish jadvali", ru: "Таблица умножения", en: "Times tables" },
+  timesDesc: { uz: "O‘yin: guruhlar va misollar", ru: "Игра: группы и примеры", en: "Game: groups and facts" },
+  timesPick: { uz: "Qaysi jadvalni mashq qilamiz?", ru: "Какую таблицу тренируем?", en: "Which table shall we practise?" },
+  timesAll: { uz: "Hammasi", ru: "Все", en: "All" },
+  timesHintMul: {
+    uz: "{a} × {b}: {b} ni {a} marta ol. {a1} × {b} ni bilsang, yana {b} qo‘sh.",
+    ru: "{a} × {b}: возьми {b} столько раз, сколько показывает {a}. Если знаешь {a1} × {b}, прибавь ещё {b}.",
+    en: "{a} × {b}: take {b}, {a} times. If you know {a1} × {b}, add one more {b}.",
+  },
+  timesHintOne: { uz: "Bitta guruhga qara: unda nechta?", ru: "Посмотри на одну группу: сколько в ней?", en: "Look at one group: how many are in it?" },
+  timesHintDiv: { uz: "Qaysi sonni {b} ga ko‘paytirsak, {c} chiqadi?", ru: "Какое число умножить на {b}, чтобы получилось {c}?", en: "Which number times {b} makes {c}?" },
+  timesAgain: { uz: "Qiyin bo‘lgan misollarni takrorlaymiz", ru: "Повторим примеры, где была ошибка", en: "Let's repeat the tricky facts" },
+
+  // Rewards ({n}, {level} are filled in by the app)
+  rewardsTitle: { uz: "Mening sovg‘alarim", ru: "Мои награды", en: "My rewards" },
+  rewardsDesc: { uz: "Konfetlar, stikerlar va darajalar", ru: "Конфеты, стикеры и уровни", en: "Candies, stickers and levels" },
+  candies: { uz: "konfet", ru: "конфет", en: "candies" },
+  dayBonus: { uz: "Bugun kelganing uchun yana +2 🍬!", ru: "И ещё +2 🍬 за то, что пришёл сегодня!", en: "And +2 🍬 for coming today!" },
+  newSticker: { uz: "Yangi stiker!", ru: "Новый стикер!", en: "New sticker!" },
+  newLevel: { uz: "Yangi daraja!", ru: "Новый уровень!", en: "New level!" },
+  newAvatars: { uz: "Yangi avatarlar ochildi:", ru: "Открылись новые аватарки:", en: "New avatars unlocked:" },
+  toNext: { uz: "«{level}» darajasigacha yana {n} 🍬", ru: "До уровня «{level}» осталось {n} 🍬", en: "{n} 🍬 to «{level}»" },
+  allLevels: {
+    uz: "Sen oltin darajaga yetding! Stikerlarni yig‘ishda davom et.",
+    ru: "Ты дошёл до золота! Собирай стикеры дальше.",
+    en: "You reached gold! Keep collecting stickers.",
+  },
+  howEarn: {
+    uz: "Konfetlar — sening mehnating uchun: o‘zing yechsang, to‘xtamasang, boshqa yo‘lni izlasang. Ular hech qachon olib qo‘yilmaydi.",
+    ru: "Конфеты — за твой труд: когда решаешь сам, не сдаёшься, ищешь другой способ. Они никогда не отнимаются.",
+    en: "Candies are for your work: solving on your own, not giving up, looking for another way. They are never taken away.",
+  },
+  stickersTitle: { uz: "Stikerlar", ru: "Стикеры", en: "Stickers" },
+  stickerEvery: { uz: "Har {n} 🍬 uchun yangi stiker", ru: "Новый стикер за каждые {n} 🍬", en: "A new sticker for every {n} 🍬" },
+  avatarsTitle: { uz: "Darajalar va avatarlar", ru: "Уровни и аватарки", en: "Levels and avatars" },
+  lockedAt: { uz: "«{level}» darajasida ochiladi", ru: "Откроется на уровне «{level}»", en: "Unlocks at «{level}»" },
+  hooray: { uz: "Hurra!", ru: "Ура!", en: "Hooray!" },
 
   // Textbooks
   bookTitle: { uz: "Darslikdan", ru: "Из учебника", en: "From a textbook" },
@@ -314,6 +422,7 @@ const S = {
     ru: "Данные хранятся только на этом устройстве.",
     en: "Data is stored only on this device.",
   },
+  parentFeelsHard: { uz: "O‘zi qiyin deydi:", ru: "Сам говорит, что трудно:", en: "Says it is hard:" },
   parentPrivacyCloud: {
     uz: "Ma’lumotlar shu qurilmada va Mirodil bulutida saqlanadi. Ularni faqat siz ko‘rasiz.",
     ru: "Данные хранятся на этом устройстве и в облаке Mirodil. Их видите только вы.",

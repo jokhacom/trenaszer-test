@@ -75,10 +75,11 @@ export interface Frame {
  * remain: a, then b taken away (also "a decreased by b");
  * more / less: b more / fewer than a;
  * times: a taken b times ("increase a b times");
- * share: a split into b equal parts ("decrease a b times").
+ * share: a split into b equal parts ("decrease a b times");
+ * part: whole a, one part b known, the other part unknown (number bonds).
  */
 export interface BarSpec {
-  kind: "total" | "remain" | "more" | "less" | "times" | "share";
+  kind: "total" | "remain" | "more" | "less" | "times" | "share" | "part";
   a: number;
   b: number;
   nameA: string;
@@ -110,6 +111,8 @@ export interface Lesson {
   /** The child's own task as a picture, without the answer. */
   own?: Visual;
   together: Step[];
+  /** Another way to solve the same task, shown after the child solved it. */
+  otherWay?: string;
   bar?: BarSpec;
   source: "local" | "ai";
 }
