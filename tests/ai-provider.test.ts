@@ -65,6 +65,9 @@ describe("AI provider choice", () => {
     const out = await readTask("AAAA", "image/png");
     expect(out.tasks).toEqual([{ title: "", text: "8 + 5" }]);
     expect(anthropicCreate).toHaveBeenCalledTimes(1);
+    // The default backup is Haiku, which does not take the server-side fallback option.
+    expect(anthropicCreate.mock.calls[0][0]).toMatchObject({ model: "claude-haiku-5-5" });
+    expect(anthropicCreate.mock.calls[0][0]).not.toHaveProperty("fallbacks");
 
     env({ GEMINI_API_KEY: "g", ANTHROPIC_API_KEY: "a", AI_PROVIDER: "gemini" });
     anthropicCreate.mockClear();

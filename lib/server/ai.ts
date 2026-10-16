@@ -13,7 +13,11 @@ import { containsText } from "../answers";
 import { gapCount, shuffleFor } from "../drill";
 import type { AnswerKind, BarSpec, Drill, DrillItem, Frame, Grade, Lang, Lesson, Step, Subject, Visual } from "../types";
 
-export const CLAUDE_MODEL = process.env.CLAUDE_MODEL || "claude-sonnet-5-5";
+/** Claude is the backup for a busy Gemini: the cheapest model is enough. */
+export const CLAUDE_MODEL = process.env.CLAUDE_MODEL || "claude-haiku-5-5";
+
+/** Models that can hand a declined request to another model on the server; Haiku cannot. */
+const SERVER_FALLBACK = new Set(["claude-fable-5-1", "claude-opus-5-5", "claude-opus-5", "claude-sonnet-5-5"]);
 export const GEMINI_MODEL = process.env.GEMINI_MODEL || "gemini-flash-latest";
 /** Reading a photo is mostly transcription: a faster, lighter model is enough. */
 export const GEMINI_READ_MODEL = process.env.GEMINI_READ_MODEL || "gemini-flash-lite-latest";
@@ -263,9 +267,8 @@ async function askClaude(system: string, input: Input, schema: Record<string, un
     system: [{ type: "text", text: system, cache_control: { type: "ephemeral" } }],
     messages: [{ role: "user", content }],
     output_config: { effort: job.kind === "read" && !job.strong ? "low" : "medium", format: { type: "json_schema", schema } },
-    // Server-side fallback if the model declines a request.
-    betas: ["server-side-fallback-2026-07-01"],
-    fallbacks: "default",
+    // Server-side fallback if the model declines a request (sending it to Haiku is an error).
+    ...(SERVER_FALLBACK.has(CLAUDE_MODEL) ? { betas: ["server-side-fallback-2026-07-01"], fallbacks: "default" as const } : {}),
   }, { timeout: job.budgetMs, maxRetries: 0 });
   if (response.stop_reason === "refusal") throw new AiError("refused");
   const text = response.content.find((b): b is Anthropic.Beta.BetaTextBlock => b.type === "text");
