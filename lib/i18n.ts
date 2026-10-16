@@ -406,6 +406,8 @@ const S = {
     en: "Done! You're logged in and progress is saved.",
   },
   loginButton: { uz: "📧 Pochta orqali kirish", ru: "📧 Войти по почте", en: "📧 Log in with email" },
+  loginFirstTitle: { uz: "Ota-onalar uchun kirish", ru: "Вход для родителей", en: "Parent login" },
+  loginSkip: { uz: "Keyinroq — kirmasdan boshlash", ru: "Позже — начать без входа", en: "Later — start without logging in" },
   loginWhy: { uz: "natijalar saqlanadi", ru: "прогресс сохранится", en: "progress is kept" },
   loginHave: {
     uz: "Avval shug‘ullanganmisiz? Pochta orqali kiring",

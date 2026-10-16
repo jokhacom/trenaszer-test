@@ -50,15 +50,20 @@ export default function App() {
     if (p) {
       setProfile(p);
       setScreen("home");
+      setReady(true);
     }
-    setReady(true);
-    fetch("/api/status")
+    // Without a profile (a new phone, a new site address) the first screen is
+    // the parent login, when it is set up: the family's tasks come back at once.
+    // A short limit: without a profile the first screen waits for this answer.
+    fetch("/api/status", { signal: AbortSignal.timeout(6000) })
       .then((r) => r.json())
       .then((d) => {
         setAi(Boolean(d.ai));
         setCloud(Boolean(d.cloud));
+        if (!p && d.cloud && !loadSession()) setScreen("login");
       })
-      .catch(() => setAi(false));
+      .catch(() => setAi(false))
+      .finally(() => setReady(true));
 
     // A parent came back from the login link, or was logged in before:
     // join this phone's progress with the cloud copy.
@@ -167,7 +172,27 @@ export default function App() {
 
         {screen === "login" && (
           <div className="stack">
-            <h1>{tr(profile?.lang ?? loginLang ?? "uz", "loginButton")}</h1>
+            {!profile && (
+              // No profile yet, so no language chosen: let the parent pick it here.
+              <div className="row" style={{ justifyContent: "center" }}>
+                {LANGS.map((l) => (
+                  <button
+                    key={l}
+                    className={`chip${(loginLang ?? "uz") === l ? " chip-on" : ""}`}
+                    onClick={() => setLoginLang(l)}
+                    aria-pressed={(loginLang ?? "uz") === l}
+                  >
+                    {FLAGS[l]} {LANG_NAMES[l]}
+                  </button>
+                ))}
+              </div>
+            )}
+            <div className="mirodil-row">
+              <Mirodil size={80} mood="happy" />
+              <div className="bubble">
+                <b>{tr(profile?.lang ?? loginLang ?? "uz", "loginFirstTitle")}</b>
+              </div>
+            </div>
             <CloudCard
               lang={profile?.lang ?? loginLang ?? "uz"}
               notice={notice}
@@ -180,8 +205,8 @@ export default function App() {
                 }
               }}
             />
-            <button className="btn btn-light" onClick={() => setScreen(profile ? "home" : "welcome")}>
-              ← {tr(profile?.lang ?? loginLang ?? "uz", profile ? "home" : "back")}
+            <button className={profile ? "btn btn-light" : "link-btn"} onClick={() => setScreen(profile ? "home" : "welcome")}>
+              {profile ? `← ${tr(profile.lang, "home")}` : tr(loginLang ?? "uz", "loginSkip")}
             </button>
           </div>
         )}

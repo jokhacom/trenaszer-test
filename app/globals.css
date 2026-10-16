@@ -1221,3 +1221,8 @@ div.level-card {
     display: none;
   }
 }
+
+.chip.chip-on {
+  border-color: var(--magenta);
+  background: var(--soft-pink);
+}
