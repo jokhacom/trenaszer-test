@@ -77,8 +77,10 @@ export default function App() {
           if (synced) setProfile(synced);
           setRewards(loadRewards());
           if (login === "ok" && r) {
-            setNotice(tr(synced?.lang ?? lang, "cloudWelcome"));
-            setScreen(synced ? "parents" : "welcome");
+            // Straight to the child's home (or the first screen for a new family), with a clear "you are in".
+            const email = loadSession()?.email;
+            setNotice(`✅ ${tr(synced?.lang ?? lang, "cloudWelcome")}${email ? ` · ${email}` : ""}`);
+            setScreen(synced ? "home" : "welcome");
           } else if (login === "ok") {
             // The link worked but the cloud did not answer: say so instead of staying silent.
             setNotice(`${tr(lang, "cloudSyncFailed")} (${tr(lang, "errorCode")}: sync)`);
@@ -101,6 +103,11 @@ export default function App() {
   useEffect(() => {
     if (profile) document.documentElement.lang = profile.lang;
   }, [profile]);
+
+  // The "you are in" note is for the first screen after login only.
+  useEffect(() => {
+    if (screen !== "home" && screen !== "welcome") setNotice((n) => (n?.startsWith("✅") ? null : n));
+  }, [screen]);
 
   // A new screen starts at the top, not where the previous one was scrolled.
   useEffect(() => {
@@ -161,6 +168,15 @@ export default function App() {
               </div>
             </div>
             <CloudCard lang={loginLang ?? profile?.lang ?? "uz"} notice={notice} onSynced={() => undefined} />
+          </div>
+        )}
+
+        {!mustLogin && notice && (screen === "home" || screen === "welcome") && (
+          <div className="bubble bubble-good row" role="status" style={{ justifyContent: "space-between", flexWrap: "nowrap" }}>
+            <span>{notice}</span>
+            <button className="link-btn" style={{ margin: 0 }} onClick={() => setNotice(null)} aria-label="OK">
+              ✕
+            </button>
           </div>
         )}
 
