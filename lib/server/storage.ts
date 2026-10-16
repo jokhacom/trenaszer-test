@@ -6,15 +6,31 @@ const BUCKET = "books";
 export const MAX_BOOK_BYTES = 50 * 1024 * 1024; // Supabase free plan limit per file
 
 export const base = () => (process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL || "").replace(/\/$/, "");
-const serviceKey = () => process.env.SUPABASE_SERVICE_ROLE_KEY || "";
-export const anonKey = () => process.env.SUPABASE_ANON_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "";
+// Newer Supabase projects use "secret" and "publishable" keys instead of
+// "service_role" and "anon"; the Vercel integration may set either kind.
+const serviceKey = () => process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SECRET_KEY || "";
+export const anonKey = () =>
+  process.env.SUPABASE_ANON_KEY ||
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
+  process.env.SUPABASE_PUBLISHABLE_KEY ||
+  process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ||
+  "";
+
+/** Old keys are JWTs and go in Authorization too; new sb_… keys go in the apikey header only. */
+export const keyHeaders = (key: string): Record<string, string> =>
+  key.startsWith("eyJ") ? { apikey: key, Authorization: `Bearer ${key}` } : { apikey: key };
+
+/** Which parts of Supabase the site can see (for the status check; no values). */
+export function supabaseParts() {
+  return { url: Boolean(base()), publicKey: Boolean(anonKey()), serverKey: Boolean(serviceKey()) };
+}
 
 export function storageEnabled(): boolean {
   return Boolean(base() && serviceKey() && anonKey());
 }
 
 function headers(extra: Record<string, string> = {}): Record<string, string> {
-  return { apikey: serviceKey(), Authorization: `Bearer ${serviceKey()}`, ...extra };
+  return { ...keyHeaders(serviceKey()), ...extra };
 }
 
 let bucketReady: Promise<void> | null = null;

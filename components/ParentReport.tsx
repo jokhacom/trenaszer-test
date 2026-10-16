@@ -128,7 +128,14 @@ export default function ParentReport({
         </>
       )}
 
-      {cloud && <CloudCard lang={lang} notice={notice} onSynced={() => setR(build(grade))} />}
+      {cloud ? (
+        <CloudCard lang={lang} notice={notice} onSynced={() => setR(build(grade))} />
+      ) : (
+        // Login is not set up on this site yet: tell the owner where to look instead of hiding it silently.
+        <p className="muted" style={{ margin: 0, fontSize: 15 }}>
+          ☁️ {t("cloudNotSetUp")} <a href="/check">/check</a>
+        </p>
+      )}
 
       <p className="muted" style={{ margin: 0, fontSize: 15 }}>
         🔒 {t(cloud && loadSession() ? "parentPrivacyCloud" : "parentPrivacy")}

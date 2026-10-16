@@ -405,6 +405,16 @@ const S = {
     ru: "Готово! Вы вошли, прогресс сохранён.",
     en: "Done! You're logged in and progress is saved.",
   },
+  cloudNotSetUp: {
+    uz: "Pochta orqali kirish hali sozlanmagan. Sayt egasi uchun tekshiruv:",
+    ru: "Вход по почте пока не настроен. Проверка для владельца сайта:",
+    en: "Email login is not set up yet. Check for the site owner:",
+  },
+  cloudSyncFailed: {
+    uz: "Kirish bo‘ldi, lekin bulut javob bermadi. Birozdan keyin 🔄 tugmasini bos.",
+    ru: "Вход прошёл, но облако не ответило. Нажмите 🔄 чуть позже.",
+    en: "You are logged in, but the cloud did not answer. Tap 🔄 a bit later.",
+  },
   cloudBadEmail: { uz: "Pochta manzilini tekshiring.", ru: "Проверьте адрес почты.", en: "Check the email address." },
   parentEmpty: {
     uz: "Hali ma’lumot kam. Farzandingiz bir nechta masala yechgandan keyin bu yerda hisobot paydo bo‘ladi.",
