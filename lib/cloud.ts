@@ -91,6 +91,18 @@ async function token(): Promise<string | null> {
   return fresh.access_token;
 }
 
+/** The login header for requests to the AI (empty when not logged in). */
+export async function authHeader(): Promise<Record<string, string>> {
+  const t = await token();
+  return t ? { Authorization: `Bearer ${t}` } : {};
+}
+
+/** The server says the login is gone: forget it and show the login screen. */
+export function loginAgain() {
+  logout();
+  window.location.assign("/app");
+}
+
 async function call(method: "GET" | "PUT", body?: unknown): Promise<{ email?: string; data?: Snapshot } | null> {
   const t = await token();
   if (!t) return null;

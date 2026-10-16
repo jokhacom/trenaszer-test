@@ -8,10 +8,11 @@ import type { Tr } from "./words";
 const S = {
   appName: { uz: "Mirodil", ru: "Миродил", en: "Mirodil" },
   tagline: {
-    uz: "Javobni aytmayman — o‘zing topishingga yordam beraman",
-    ru: "Я не говорю ответ — я помогаю найти его самому",
-    en: "I don't tell the answer — I help you find it yourself",
+    uz: "Birga o‘ylaymiz — javobni o‘zing topasan!",
+    ru: "Подумаем вместе — ответ найдёшь сам!",
+    en: "Let's think together — you'll find the answer!",
   },
+
 
   // Welcome
   hello: { uz: "Salom! Men Mirodilman.", ru: "Привет! Я Миродил.", en: "Hi! I'm Mirodil." },
@@ -407,13 +408,7 @@ const S = {
   },
   loginButton: { uz: "📧 Pochta orqali kirish", ru: "📧 Войти по почте", en: "📧 Log in with email" },
   loginFirstTitle: { uz: "Ota-onalar uchun kirish", ru: "Вход для родителей", en: "Parent login" },
-  loginSkip: { uz: "Keyinroq — kirmasdan boshlash", ru: "Позже — начать без входа", en: "Later — start without logging in" },
-  loginWhy: { uz: "natijalar saqlanadi", ru: "прогресс сохранится", en: "progress is kept" },
-  loginHave: {
-    uz: "Avval shug‘ullanganmisiz? Pochta orqali kiring",
-    ru: "Уже занимались? Войдите по почте",
-    en: "Used Mirodil before? Log in with email",
-  },
+
   cloudNotSetUp: {
     uz: "Pochta orqali kirish hali sozlanmagan. Sayt egasi uchun tekshiruv:",
     ru: "Вход по почте пока не настроен. Проверка для владельца сайта:",

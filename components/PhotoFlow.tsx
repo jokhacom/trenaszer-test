@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { tr, type Key } from "@/lib/i18n";
 import { shrinkPhoto } from "@/lib/image";
+import { authHeader, loginAgain } from "@/lib/cloud";
 import { gapCount } from "@/lib/drill";
 import { addToHistory, loadHistory, markSolved, type HistoryEntry } from "@/lib/history";
 import { recordPhotoTask, recordResult } from "@/lib/progress";
@@ -88,12 +89,13 @@ export default function PhotoFlow({
     try {
       const res = await fetch(url, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...(await authHeader()) },
         body: JSON.stringify(body),
         signal: ctrl.signal,
       });
       // A timeout on the hosting side returns an HTML page, not JSON.
       const data = (await res.json().catch(() => ({ error: "ai_error", code: `http-${res.status}` }))) as Record<string, unknown>;
+      if (res.status === 401 && data.error === "logged_out") loginAgain();
       return { ok: res.ok, status: res.status, data };
     } catch (e) {
       return { ok: false, status: 0, data: { error: "ai_error", code: e instanceof DOMException && e.name === "AbortError" ? "timeout" : "network" } };

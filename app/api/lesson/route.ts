@@ -1,3 +1,5 @@
+import { requireLogin } from "@/lib/server/auth";
+import { db } from "@/lib/server/db";
 import { lessonFromExample } from "@/lib/problems";
 import { aiEnabled, AiError, buildDrill, buildLesson, type Input } from "@/lib/server/ai";
 import { allow, clientIp, fingerprint, getLesson, putLesson } from "@/lib/server/store";
@@ -12,6 +14,8 @@ const LESSON_VERSION = "v3";
 export const maxDuration = 120;
 
 export async function POST(req: Request) {
+  const denied = await requireLogin(req, Boolean(db()));
+  if (denied) return denied;
   const body = (await req.json().catch(() => null)) as {
     text?: string;
     lang?: string;

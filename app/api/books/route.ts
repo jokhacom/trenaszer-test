@@ -1,3 +1,5 @@
+import { requireLogin } from "@/lib/server/auth";
+import { db } from "@/lib/server/db";
 import { createBook, listBooks } from "@/lib/server/books";
 import { booksEnabled, failure, toGrade, toLang, toSubject } from "@/lib/server/books-api";
 import { MAX_BOOK_BYTES } from "@/lib/server/storage";
@@ -7,6 +9,8 @@ export const runtime = "nodejs";
 
 /** Textbooks for a grade. */
 export async function GET(req: Request) {
+  const denied = await requireLogin(req, Boolean(db()));
+  if (denied) return denied;
   if (!booksEnabled()) return Response.json({ enabled: false, books: [] });
   const grade = toGrade(new URL(req.url).searchParams.get("grade"));
   if (!grade) return Response.json({ error: "bad_request" }, { status: 400 });
@@ -19,6 +23,8 @@ export async function GET(req: Request) {
 
 /** Adds a textbook: saves its details and returns a one-time upload URL for the PDF. */
 export async function POST(req: Request) {
+  const denied = await requireLogin(req, Boolean(db()));
+  if (denied) return denied;
   if (!booksEnabled()) return Response.json({ error: "books_off" }, { status: 503 });
   if (!allow(clientIp(req), "book-add", 10)) return Response.json({ error: "limit" }, { status: 429 });
   const body = (await req.json().catch(() => null)) as Record<string, unknown> | null;
