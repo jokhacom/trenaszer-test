@@ -2,6 +2,7 @@
 // The full version moves this to the database (accounts for child and parent).
 
 import { TOPICS_BY_GRADE } from "./problems";
+import { award, candiesFor } from "./rewards";
 import type { Grade, Lang, Topic } from "./types";
 
 export interface Profile {
@@ -60,7 +61,7 @@ const READING_KEY = "mirodil:reading";
 const DAYS_KEY = "mirodil:days";
 
 /** Marks today as a day with practice (for the parent report). */
-function markToday() {
+export function markToday() {
   const days = read<string[]>(DAYS_KEY) ?? [];
   const today = new Date().toISOString().slice(0, 10);
   if (!days.includes(today)) write(DAYS_KEY, [...days, today].slice(-60));
@@ -87,6 +88,8 @@ export function recordReading(_storyId: string, firstTry: number, questions: num
   const r = loadReading();
   write(READING_KEY, { stories: r.stories + 1, firstTry: r.firstTry + firstTry, questions: r.questions + questions });
   markToday();
+  // A candy for the story, and one for each answer found on the first try.
+  award(1 + firstTry);
 }
 
 const PHOTO_KEY = "mirodil:photo";
@@ -100,6 +103,7 @@ export function recordPhotoTask(solved: boolean, maxLevel: number) {
   const s = loadPhotoStat();
   write(PHOTO_KEY, { tries: s.tries + 1, selfSolved: s.selfSolved + (solved && maxLevel < 3 ? 1 : 0), helpSum: s.helpSum + maxLevel });
   markToday();
+  award(candiesFor(solved, maxLevel));
 }
 
 /** Topics the child handles well: mostly solved without the "together" step. */
@@ -120,6 +124,7 @@ export function recordResult(topic: Topic, solved: boolean, maxLevel: number) {
   s.helpSum += maxLevel;
   all[topic] = s;
   write(PROGRESS_KEY, all);
+  award(candiesFor(solved, maxLevel));
 }
 
 /** Topics that need more practice: low self-solved share or a lot of help. */

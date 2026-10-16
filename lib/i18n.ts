@@ -160,6 +160,7 @@ const S = {
   },
   another: { uz: "Yana masala", ru: "Ещё задача", en: "Another problem" },
   next: { uz: "Keyingisi", ru: "Дальше", en: "Next" },
+  again: { uz: "Yana bir bor", ru: "Ещё раз", en: "Again" },
   home: { uz: "Bosh sahifa", ru: "На главную", en: "Home" },
   back: { uz: "Orqaga", ru: "Назад", en: "Back" },
 
@@ -177,6 +178,52 @@ const S = {
     en: "10 minutes are up — that's enough for today. Great work!",
   },
   skip: { uz: "Boshqa masala", ru: "Другая задача", en: "Another problem" },
+
+  otherWayAsk: { uz: "Yana qanday yechish mumkin? (+1 🍬)", ru: "А как ещё можно решить? (+1 🍬)", en: "How else can we solve it? (+1 🍬)" },
+  otherWayTitle: { uz: "Boshqa yo‘l", ru: "Другой способ", en: "Another way" },
+
+  // Number bonds ({a}, {whole}, {i}, {n} are filled in by the app)
+  bondsTitle: { uz: "Son uychalari", ru: "Числовые домики", en: "Number bonds" },
+  bondsDesc: { uz: "Son qaysi qismlardan iborat?", ru: "Из каких частей число?", en: "Which parts make the number?" },
+  bondsAsk: { uz: "Bo‘sh doirachaga qaysi son kerak?", ru: "Какое число в пустом кружке?", en: "Which number goes in the empty circle?" },
+  bondsRound: { uz: "{n} tadan {i}-uycha", ru: "Домик {i} из {n}", en: "House {i} of {n}" },
+  bondsHintDots: { uz: "Rangsiz doirachalarni sana.", ru: "Посчитай кружки без цвета.", en: "Count the circles without colour." },
+  bondsHintPart: {
+    uz: "O‘ylab ko‘r: {a} va yana qancha birga {whole} bo‘ladi?",
+    ru: "Подумай: {a} и сколько ещё вместе дают {whole}?",
+    en: "Think: {a} and how many more make {whole}?",
+  },
+  bondsHintWhole: { uz: "Ikki qismni qo‘sh.", ru: "Сложи две части.", en: "Join the two parts." },
+  bondsRule: {
+    uz: "Tepada — butun son. Pastda — uning ikki qismi. Ikki qism birga butunni beradi.",
+    ru: "Наверху — целое число. Внизу — две его части. Вместе части дают целое.",
+    en: "On top is the whole. Below are its two parts. Together the parts make the whole.",
+  },
+
+  // Rewards ({n}, {level} are filled in by the app)
+  rewardsTitle: { uz: "Mening sovg‘alarim", ru: "Мои награды", en: "My rewards" },
+  rewardsDesc: { uz: "Konfetlar, stikerlar va darajalar", ru: "Конфеты, стикеры и уровни", en: "Candies, stickers and levels" },
+  candies: { uz: "konfet", ru: "конфет", en: "candies" },
+  dayBonus: { uz: "Bugun kelganing uchun yana +2 🍬!", ru: "И ещё +2 🍬 за то, что пришёл сегодня!", en: "And +2 🍬 for coming today!" },
+  newSticker: { uz: "Yangi stiker!", ru: "Новый стикер!", en: "New sticker!" },
+  newLevel: { uz: "Yangi daraja!", ru: "Новый уровень!", en: "New level!" },
+  newAvatars: { uz: "Yangi avatarlar ochildi:", ru: "Открылись новые аватарки:", en: "New avatars unlocked:" },
+  toNext: { uz: "«{level}» darajasigacha yana {n} 🍬", ru: "До уровня «{level}» осталось {n} 🍬", en: "{n} 🍬 to «{level}»" },
+  allLevels: {
+    uz: "Sen oltin darajaga yetding! Stikerlarni yig‘ishda davom et.",
+    ru: "Ты дошёл до золота! Собирай стикеры дальше.",
+    en: "You reached gold! Keep collecting stickers.",
+  },
+  howEarn: {
+    uz: "O‘zing yechsang — 3 🍬, yordam bilan — 2 🍬, birga — 1 🍬. Har kuni birinchi masala uchun yana 2 🍬. Konfetlar hech qachon olib qo‘yilmaydi.",
+    ru: "Решил сам — 3 🍬, с подсказкой — 2 🍬, вместе — 1 🍬. Каждый день за первую задачу ещё 2 🍬. Конфеты никогда не отнимаются.",
+    en: "Solved alone — 3 🍬, with a hint — 2 🍬, together — 1 🍬. The first task each day gives 2 🍬 more. Candies are never taken away.",
+  },
+  stickersTitle: { uz: "Stikerlar", ru: "Стикеры", en: "Stickers" },
+  stickerEvery: { uz: "Har {n} 🍬 uchun yangi stiker", ru: "Новый стикер за каждые {n} 🍬", en: "A new sticker for every {n} 🍬" },
+  avatarsTitle: { uz: "Darajalar va avatarlar", ru: "Уровни и аватарки", en: "Levels and avatars" },
+  lockedAt: { uz: "«{level}» darajasida ochiladi", ru: "Откроется на уровне «{level}»", en: "Unlocks at «{level}»" },
+  hooray: { uz: "Hurra!", ru: "Ура!", en: "Hooray!" },
 
   // Textbooks
   bookTitle: { uz: "Darslikdan", ru: "Из учебника", en: "From a textbook" },

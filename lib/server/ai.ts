@@ -120,6 +120,8 @@ Pictures (picture objects; kind "none" only when a picture cannot help). In math
 - "groups": multiplication or division; a groups with b objects each; emoji for the object.
 own_picture shows the child's own task and must never show its answer. Each example slide may have a picture of the example.
 
+other_way: shown only AFTER the child has solved the task. Another way to solve the same task in 1–3 short sentences (count on vs make a ten; a bar model vs an equation; check with the opposite operation). Singapore teaches more than one strategy. Empty when there is no other sensible way.
+
 Also return:
 - task: the task text, cleaned up, in the output language.
 - topic: a short topic name in the output language.
@@ -207,10 +209,11 @@ const LESSON_SCHEMA = {
     },
     together: { type: "array", items: STEP_SCHEMA },
     own_picture: PICTURE_SCHEMA,
+    other_way: { type: "string" },
   },
   required: [
     "supported", "reason", "subject", "task", "topic", "answer_kind", "answer_number", "solution_expression",
-    "choices", "correct_choice", "accepted", "hint", "question", "example_frames", "together", "own_picture",
+    "choices", "correct_choice", "accepted", "hint", "question", "example_frames", "together", "own_picture", "other_way",
   ],
   additionalProperties: false,
 };
@@ -424,6 +427,7 @@ export interface RawLesson {
   example_frames: { text: string; picture: RawPicture }[];
   together: RawStep[];
   own_picture: RawPicture;
+  other_way?: string;
 }
 
 const GENERIC_HINT: Record<Lang, string> = {
@@ -576,6 +580,8 @@ export function checkLesson(raw: RawLesson, lang: Lang): LessonResult {
       exampleFrames: frames.length >= 2 ? frames : undefined,
       own,
       together,
+      // Shown after the child solved it, so it may use the task's numbers.
+      otherWay: raw.other_way?.trim() ? tidy(raw.other_way.trim()) : undefined,
       source: "ai",
     },
   };

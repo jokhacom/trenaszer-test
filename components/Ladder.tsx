@@ -4,6 +4,8 @@ import { useEffect, useRef, useState } from "react";
 import { GENTLE_WRONG, PRAISE, tr, type Key } from "@/lib/i18n";
 import { matchesText } from "@/lib/answers";
 import { classifyInput, sameNumber, vary, WRONG_BEFORE_STEP_UP, type Level } from "@/lib/ladder";
+import { helpOrder, preferredHelp, recordHelp, type Method } from "@/lib/methods";
+import { award } from "@/lib/rewards";
 import { speak, stopSpeaking } from "@/lib/speech";
 import type { Frame, Grade, Lang, Lesson, Step, Visual as V } from "@/lib/types";
 import Celebrate from "./Celebrate";
@@ -11,6 +13,8 @@ import Slides from "./Slides";
 import Visual from "./Visual";
 import Listen from "./Listen";
 import Mirodil, { type Mood } from "./Mirodil";
+
+const HELP_RANK: Record<Method, number> = { example: 1, hint: 1, question: 2, together: 3 };
 
 interface Msg {
   from: "mirodil" | "kid";
@@ -20,7 +24,12 @@ interface Msg {
   frames?: Frame[];
   visual?: V;
   good?: boolean;
+  /** A big sticker Mirodil sends with praise. */
+  sticker?: string;
 }
+
+/** Stickers Mirodil sends when the child solves a task. */
+const REACTIONS = ["🎉", "👏", "🌟", "💪", "🥳", "🏆", "🦁", "🚀"];
 
 type Pending = { kind: "question" } | { kind: "together"; i: number } | null;
 
@@ -55,7 +64,11 @@ export default function Ladder({
   // When the child is stuck, a solved similar example with pictures comes first
   // (Singapore: concrete → pictorial → abstract). Without an example, a hint.
   const hasExample = (lesson.exampleFrames?.length ?? 0) > 0 || lesson.example.length > 0;
-  const levels: Level[] = ["try", hasExample ? "example" : "hint", "question", "together"];
+  // The kind of help that worked for this child before comes first.
+  const [levels] = useState<Level[]>(() => [
+    "try",
+    ...helpOrder([hasExample ? "example" : "hint", "question", "together"], preferredHelp()),
+  ]);
   const kind = lesson.answerKind ?? "number";
 
   const [level, setLevel] = useState<Level>("try");
@@ -64,6 +77,7 @@ export default function Ladder({
   const [wrong, setWrong] = useState(0);
   const [solved, setSolved] = useState(false);
   const [paused, setPaused] = useState(false);
+  const [otherShown, setOtherShown] = useState(false);
   const [input, setInput] = useState("");
   const [mood, setMood] = useState<Mood>("happy");
   const reported = useRef(false);
@@ -71,6 +85,9 @@ export default function Ladder({
   const seed = useRef(0);
 
   const levelIndex = levels.indexOf(level);
+  // How much help was used, by its kind (not by its place in the order): 1 example or hint, 2 question, 3 together.
+  const shown = levels.slice(1, levelIndex + 1) as Method[];
+  const helpUsed = Math.max(0, ...shown.map((m) => HELP_RANK[m]));
 
   // First-graders often can't read yet: Mirodil reads every new message aloud.
   const lastSpoken = useRef(-1);
@@ -89,6 +106,7 @@ export default function Ladder({
   function report(r: LadderResult) {
     if (reported.current) return;
     reported.current = true;
+    recordHelp(shown, r.solved);
     onDone(r);
   }
 
@@ -103,7 +121,7 @@ export default function Ladder({
     const extra: Msg[] = lead ? [lead] : [];
     setWrong(0);
     setMood("think");
-    if (level === "together") {
+    if (levelIndex === levels.length - 1) {
       // Top of the ladder: suggest a break instead of the answer.
       setPaused(true);
       const cur = pending?.kind === "together" ? lesson.together[pending.i] : null;
@@ -136,8 +154,13 @@ export default function Ladder({
     setSolved(true);
     setPending(null);
     setMood("cheer");
-    say({ from: "mirodil", good: true, text: `${vary(PRAISE[lang], seed.current++)} ${t("solvedSelf")}\n\n${t("whyQuestion")}` });
-    report({ solved: true, maxLevel: levelIndex });
+    say({
+      from: "mirodil",
+      good: true,
+      text: `${vary(PRAISE[lang], seed.current++)} ${t("solvedSelf")}\n\n${t("whyQuestion")}`,
+      sticker: vary(REACTIONS, seed.current++),
+    });
+    report({ solved: true, maxLevel: helpUsed });
   }
 
   function answerNumber(value: number, shown: string) {
@@ -213,7 +236,7 @@ export default function Ladder({
   }
 
   function leave() {
-    if (!solved) report({ solved: false, maxLevel: levelIndex });
+    if (!solved) report({ solved: false, maxLevel: helpUsed });
     onNext?.();
   }
 
@@ -252,6 +275,13 @@ export default function Ladder({
               <div className={`bubble${m.good ? " bubble-good" : ""}`}>
                 {m.title && <span className="bubble-title">{m.title}</span>}
                 {m.text}
+                {m.sticker && (
+                  <div>
+                    <span className="sticker-pop" aria-hidden>
+                      {m.sticker}
+                    </span>
+                  </div>
+                )}
                 {m.frames && <Slides frames={m.frames} lang={lang} autoSpeak={grade === 1} />}
                 {m.visual && <Visual v={m.visual} lang={lang} />}
                 {m.lines && (
@@ -317,6 +347,20 @@ export default function Ladder({
             </button>
           )}
         </div>
+      )}
+
+      {solved && lesson.otherWay && !otherShown && (
+        <button
+          className="btn btn-light btn-wide"
+          onClick={() => {
+            setOtherShown(true);
+            // A candy for curiosity: looking for another way is part of the Singapore approach.
+            award(1);
+            say({ from: "mirodil", title: t("otherWayTitle"), text: lesson.otherWay! });
+          }}
+        >
+          💡 {t("otherWayAsk")}
+        </button>
       )}
 
       {solved && onNext && (

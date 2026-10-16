@@ -1,6 +1,7 @@
 // Pictures for the Singapore concrete → pictorial → abstract approach:
 // ten frames, place-value blocks, groups, objects, bars and the column method.
 
+import type React from "react";
 import type { BlockRow, Lang, Visual as V } from "@/lib/types";
 import BarDiagram from "./BarDiagram";
 
@@ -22,7 +23,7 @@ export default function Visual({ v, lang }: { v: V; lang: Lang }) {
       return (
         <div className="vis vis-groups">
           {Array.from({ length: v.groups }, (_, g) => (
-            <div key={g} className="group">
+            <div key={g} className="group" style={{ "--i": g } as React.CSSProperties}>
               {v.emoji.repeat(v.each)}
             </div>
           ))}
@@ -45,7 +46,7 @@ function TenFrames({ a, b, move }: { a: number; b: number; move: number }) {
         <div key={f} className="tenframe">
           {cells.map((c, i) => (
             <span key={i} className="cell">
-              {c && <i className={c} />}
+              {c && <i className={c} style={{ "--i": f * 10 + i } as React.CSSProperties} />}
             </span>
           ))}
         </div>
@@ -130,7 +131,7 @@ function Objects({ emoji, counts, crossed }: { emoji: string; counts: number[]; 
           {Array.from({ length: n }, (_, i) => {
             const idx = k++;
             return (
-              <span key={i} className={idx >= total - crossed ? "obj crossed" : "obj"}>
+              <span key={i} className={idx >= total - crossed ? "obj crossed" : "obj"} style={{ "--i": idx } as React.CSSProperties}>
                 {emoji}
               </span>
             );

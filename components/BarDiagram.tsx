@@ -71,6 +71,26 @@ export default function BarDiagram({ spec, lang, kind = spec.kind }: { spec: Bar
     );
   }
 
+  if (kind === "part") {
+    // The whole is known, one part is known, the other part is "?".
+    const rest = Math.max(a0 - b0, 1);
+    return (
+      <div className="bars">
+        <div className="bar-line">
+          <span>{nameA}</span>
+          <div className="brace">{a}</div>
+        </div>
+        <div className="bar-line">
+          <span />
+          <div className="bar-track">
+            <div className="seg seg-a" style={{ width: w(b0) }}>{b}</div>
+            <div className="seg seg-q" style={{ width: w(rest) }}>?</div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   if (kind === "remain") {
     const rest = Math.max(a0 - b0, 1);
     return (
