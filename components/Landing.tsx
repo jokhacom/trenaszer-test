@@ -134,7 +134,7 @@ export default function Landing() {
         </div>
         <div className="lp-hero-hero">
           <div className="bubble lp-hero-bubble">
-            {t("bubble")} <span className="sticker-pop">🌟</span>
+            {t("bubble")} <span className="sticker-pop">😜</span>
           </div>
           <Mirodil size={200} mood="cheer" />
         </div>
