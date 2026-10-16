@@ -103,6 +103,12 @@ export function loginAgain() {
   window.location.assign("/app");
 }
 
+/** The parent pressed "Log out": forget the login and go back to the main page. */
+export function logoutToLanding() {
+  logout();
+  window.location.assign("/");
+}
+
 async function call(method: "GET" | "PUT", body?: unknown): Promise<{ email?: string; data?: Snapshot } | null> {
   const t = await token();
   if (!t) return null;
