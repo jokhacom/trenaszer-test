@@ -1,3 +1,5 @@
+import { requireLogin } from "@/lib/server/auth";
+import { db } from "@/lib/server/db";
 import { findExercise } from "@/lib/server/books";
 import { booksEnabled, failure, isId, toLang, toNumber } from "@/lib/server/books-api";
 import { allow, clientIp } from "@/lib/server/store";
@@ -8,6 +10,8 @@ export const maxDuration = 120;
 
 /** "Page 21, exercise 5" → the exercise text, in the same shape as a read photo. */
 export async function POST(req: Request) {
+  const denied = await requireLogin(req, Boolean(db()));
+  if (denied) return denied;
   if (!booksEnabled()) return Response.json({ error: "books_off" }, { status: 503 });
   const body = (await req.json().catch(() => null)) as Record<string, unknown> | null;
   const page = toNumber(body?.page);

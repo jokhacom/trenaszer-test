@@ -22,7 +22,7 @@ import CloudCard from "./CloudCard";
 import RewardPop from "./RewardPop";
 import RewardsAlbum, { LevelBar } from "./RewardsAlbum";
 
-type Screen = "welcome" | "home" | "photo" | "session" | "bar" | "practice" | "read" | "parents" | "rewards" | "bonds" | "times" | "login";
+type Screen = "welcome" | "home" | "photo" | "session" | "bar" | "practice" | "read" | "parents" | "rewards" | "bonds" | "times";
 
 const AVATARS = ["🦁", "🐯", "🐼", "🦊", "🐰", "🦉", "🐢", "🐱"];
 const FLAGS: Record<Lang, string> = { uz: "🇺🇿", ru: "🇷🇺", en: "🇬🇧" };
@@ -50,7 +50,6 @@ export default function App() {
     if (p) {
       setProfile(p);
       setScreen("home");
-      setReady(true);
     }
     // Without a profile (a new phone, a new site address) the first screen is
     // the parent login, when it is set up: the family's tasks come back at once.
@@ -60,9 +59,6 @@ export default function App() {
       .then((d) => {
         setAi(Boolean(d.ai));
         setCloud(Boolean(d.cloud));
-        // From the landing page's "Log in with email" (/app?login=1), or a device without a profile.
-        const asked = new URLSearchParams(window.location.search).get("login") === "1";
-        if ((asked || !p) && d.cloud && !loadSession()) setScreen("login");
       })
       .catch(() => setAi(false))
       .finally(() => setReady(true));
@@ -113,6 +109,9 @@ export default function App() {
 
   if (!ready) return null;
 
+  // With email login set up, the app opens only for a logged-in family.
+  const mustLogin = cloud && !loadSession();
+
   const home = () => setScreen("home");
   // A child stuck on a task goes to a game that teaches the same idea another way.
   const openGame = (g: Game) => setScreen(g === "bar" ? "bar" : g);
@@ -121,7 +120,7 @@ export default function App() {
     <>
       <div className="atlas-band" />
       <main className="shell">
-        {profile && screen !== "welcome" && (
+        {profile && !mustLogin && screen !== "welcome" && (
           <header className="topbar">
             <button className="brand" onClick={home} aria-label={tr(profile.lang, "home")}>
               <Mirodil size={44} />
@@ -141,16 +140,35 @@ export default function App() {
           </header>
         )}
 
-        {screen === "welcome" && (
+        {mustLogin && (
+          <div className="stack">
+            <div className="row" style={{ justifyContent: "center" }}>
+              {LANGS.map((l) => (
+                <button
+                  key={l}
+                  className={`chip${(loginLang ?? profile?.lang ?? "uz") === l ? " chip-on" : ""}`}
+                  onClick={() => setLoginLang(l)}
+                  aria-pressed={(loginLang ?? profile?.lang ?? "uz") === l}
+                >
+                  {FLAGS[l]} {LANG_NAMES[l]}
+                </button>
+              ))}
+            </div>
+            <div className="mirodil-row">
+              <Mirodil size={80} mood="happy" />
+              <div className="bubble">
+                <b>{tr(loginLang ?? profile?.lang ?? "uz", "loginFirstTitle")}</b>
+              </div>
+            </div>
+            <CloudCard lang={loginLang ?? profile?.lang ?? "uz"} notice={notice} onSynced={() => undefined} />
+          </div>
+        )}
+
+        {!mustLogin && screen === "welcome" && (
           <Welcome
             initial={profile}
             extraAvatars={avatarsFor(rewards.candies)}
-            cloud={cloud}
             defaultLang={loginLang}
-            onLogin={(l) => {
-              setLoginLang(l);
-              setScreen("login");
-            }}
             onStart={(p) => {
               saveProfile(p);
               setProfile(p);
@@ -159,11 +177,10 @@ export default function App() {
           />
         )}
 
-        {profile && screen === "home" && (
+        {!mustLogin && profile && screen === "home" && (
           <Home
             profile={profile}
             rewards={rewards}
-            cloud={cloud}
             onOpen={setScreen}
             onPractice={(lesson) => {
               setPractice(lesson);
@@ -172,53 +189,13 @@ export default function App() {
           />
         )}
 
-        {screen === "login" && (
-          <div className="stack">
-            {!profile && (
-              // No profile yet, so no language chosen: let the parent pick it here.
-              <div className="row" style={{ justifyContent: "center" }}>
-                {LANGS.map((l) => (
-                  <button
-                    key={l}
-                    className={`chip${(loginLang ?? "uz") === l ? " chip-on" : ""}`}
-                    onClick={() => setLoginLang(l)}
-                    aria-pressed={(loginLang ?? "uz") === l}
-                  >
-                    {FLAGS[l]} {LANG_NAMES[l]}
-                  </button>
-                ))}
-              </div>
-            )}
-            <div className="mirodil-row">
-              <Mirodil size={80} mood="happy" />
-              <div className="bubble">
-                <b>{tr(profile?.lang ?? loginLang ?? "uz", "loginFirstTitle")}</b>
-              </div>
-            </div>
-            <CloudCard
-              lang={profile?.lang ?? loginLang ?? "uz"}
-              notice={notice}
-              onSynced={() => {
-                const p = loadProfile();
-                if (p) {
-                  setProfile(p);
-                  setRewards(loadRewards());
-                  setScreen("home");
-                }
-              }}
-            />
-            <button className={profile ? "btn btn-light" : "link-btn"} onClick={() => setScreen(profile ? "home" : "welcome")}>
-              {profile ? `← ${tr(profile.lang, "home")}` : tr(loginLang ?? "uz", "loginSkip")}
-            </button>
-          </div>
-        )}
-        {profile && screen === "times" && <TimesGame lang={profile.lang} grade={profile.grade} onHome={home} />}
-        {profile && screen === "bonds" && <BondsGame lang={profile.lang} grade={profile.grade} onHome={home} />}
-        {profile && screen === "rewards" && <RewardsAlbum lang={profile.lang} rewards={rewards} onHome={home} />}
-        {profile && screen === "photo" && <PhotoFlow lang={profile.lang} grade={profile.grade} ai={ai} onHome={home} onGame={openGame} />}
-        {profile && screen === "session" && <Session lang={profile.lang} grade={profile.grade} onHome={home} onGame={openGame} />}
-        {profile && screen === "read" && <ReadTogether lang={profile.lang} grade={profile.grade} onHome={home} />}
-        {profile && screen === "parents" && (
+        {!mustLogin && profile && screen === "times" && <TimesGame lang={profile.lang} grade={profile.grade} onHome={home} />}
+        {!mustLogin && profile && screen === "bonds" && <BondsGame lang={profile.lang} grade={profile.grade} onHome={home} />}
+        {!mustLogin && profile && screen === "rewards" && <RewardsAlbum lang={profile.lang} rewards={rewards} onHome={home} />}
+        {!mustLogin && profile && screen === "photo" && <PhotoFlow lang={profile.lang} grade={profile.grade} ai={ai} onHome={home} onGame={openGame} />}
+        {!mustLogin && profile && screen === "session" && <Session lang={profile.lang} grade={profile.grade} onHome={home} onGame={openGame} />}
+        {!mustLogin && profile && screen === "read" && <ReadTogether lang={profile.lang} grade={profile.grade} onHome={home} />}
+        {!mustLogin && profile && screen === "parents" && (
           <ParentReport
             lang={profile.lang}
             grade={profile.grade}
@@ -231,7 +208,7 @@ export default function App() {
             }}
           />
         )}
-        {profile && screen === "bar" && (
+        {!mustLogin && profile && screen === "bar" && (
           <div className="stack">
             <h1>🧩 {tr(profile.lang, "barTitle")}</h1>
             <BarGame lang={profile.lang} grade={profile.grade} />
@@ -240,7 +217,7 @@ export default function App() {
             </button>
           </div>
         )}
-        {profile && screen === "practice" && practice && (
+        {!mustLogin && profile && screen === "practice" && practice && (
           <div className="stack">
             <Ladder
               key={practice.id}
@@ -264,17 +241,12 @@ export default function App() {
 function Welcome({
   initial,
   extraAvatars,
-  cloud,
   defaultLang,
-  onLogin,
   onStart,
 }: {
   initial: Profile | null;
   /** Avatars unlocked with a level (bronze, silver, gold). */
   extraAvatars: string[];
-  /** Email login is set up: a family that used Mirodil before can get its progress back. */
-  cloud: boolean;
-  onLogin: (lang: Lang) => void;
   onStart: (p: Profile) => void;
   /** The language chosen before going to the login screen and back. */
   defaultLang?: Lang;
@@ -333,11 +305,6 @@ function Welcome({
       <button className="btn btn-primary btn-wide" style={{ minHeight: 76, fontSize: 26 }} onClick={() => onStart({ lang, avatar, grade })}>
         {tr(lang, "start")} 🚀
       </button>
-      {cloud && !loadSession() && (
-        <button className="btn btn-light btn-wide" onClick={() => onLogin(lang)}>
-          📧 {tr(lang, "loginHave")}
-        </button>
-      )}
     </div>
   );
 }
@@ -345,13 +312,11 @@ function Welcome({
 function Home({
   profile,
   rewards,
-  cloud,
   onOpen,
   onPractice,
 }: {
   profile: Profile;
   rewards: Rewards;
-  cloud: boolean;
   onOpen: (s: Screen) => void;
   onPractice: (l: Lesson) => void;
 }) {
@@ -430,11 +395,6 @@ function Home({
         </section>
       )}
 
-      {cloud && !loadSession() && (
-        <button className="btn btn-light btn-wide" onClick={() => onOpen("login")}>
-          {tr(lang, "loginButton")} — <span className="muted">{tr(lang, "loginWhy")}</span>
-        </button>
-      )}
 
       <button className="link-btn" onClick={() => onOpen("parents")}>
         👨‍👩‍👧 {tr(lang, "parentTitle")}

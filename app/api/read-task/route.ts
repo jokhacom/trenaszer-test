@@ -1,3 +1,5 @@
+import { requireLogin } from "@/lib/server/auth";
+import { db } from "@/lib/server/db";
 import { aiEnabled, AiError, readTask } from "@/lib/server/ai";
 import { allow, clientIp } from "@/lib/server/store";
 import { LANGS, type Lang } from "@/lib/types";
@@ -9,6 +11,8 @@ export const maxDuration = 120;
 const MAX_BASE64 = 7_000_000; // ~5 MB image; the browser shrinks photos before sending
 
 export async function POST(req: Request) {
+  const denied = await requireLogin(req, Boolean(db()));
+  if (denied) return denied;
   if (!aiEnabled()) return Response.json({ error: "ai_off" }, { status: 503 });
   if (!allow(clientIp(req), "read", 30)) return Response.json({ error: "limit" }, { status: 429 });
 

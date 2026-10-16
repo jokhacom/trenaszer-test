@@ -33,7 +33,6 @@ function Rosette({ size, colors }: { size: number; colors: [string, string, stri
  */
 export default function Landing() {
   const [lang, setLang] = useState<Lang>("uz");
-  const [returning, setReturning] = useState(false);
   const t = (k: LKey) => L[k][lang];
 
   useEffect(() => {
@@ -47,7 +46,6 @@ export default function Landing() {
       const profile = JSON.parse(localStorage.getItem("mirodil:profile") ?? "null") as { lang?: Lang } | null;
       const l = saved ?? profile?.lang;
       if (l && LANGS.includes(l)) setLang(l);
-      setReturning(Boolean(profile));
     } catch {
       // Storage is off: Uzbek by default.
     }
@@ -67,20 +65,43 @@ export default function Landing() {
   }
 
   const steps: [string, LKey, LKey][] = [
-    ["📷", "step1", "step1Text"],
-    ["🪜", "step2", "step2Text"],
-    ["🎉", "step3", "step3Text"],
+    ["📧", "step1", "step1Text"],
+    ["📷", "step2", "step2Text"],
+    ["📈", "step3", "step3Text"],
   ];
   const features: [string, LKey, LKey, string][] = [
-    ["🙅", "f1", "f1t", "lp-c-pink"],
+    ["👨‍👩‍👧", "f8", "f8t", "lp-c-pink"],
     ["🇸🇬", "f2", "f2t", "lp-c-blue"],
     ["🎮", "f3", "f3t", "lp-c-green"],
     ["🍬", "f4", "f4t", "lp-c-yellow"],
     ["📚", "f5", "f5t", "lp-c-turq"],
     ["🗣️", "f6", "f6t", "lp-c-purple"],
     ["⏱️", "f7", "f7t", "lp-c-green"],
-    ["👨‍👩‍👧", "f8", "f8t", "lp-c-pink"],
+    ["☁️", "f9", "f9t", "lp-c-blue"],
   ];
+  const compare: [LKey, LKey][] = [
+    ["c1a", "c1b"],
+    ["c2a", "c2b"],
+    ["c3a", "c3b"],
+    ["c4a", "c4b"],
+    ["c5a", "c5b"],
+    ["c6a", "c6b"],
+  ];
+  const faq: [LKey, LKey][] = [
+    ["q1", "a1"],
+    ["q2", "a2"],
+    ["q3", "a3"],
+    ["q4", "a4"],
+    ["q5", "a5"],
+    ["q6", "a6"],
+    ["q7", "a7"],
+  ];
+  // One way in: the app asks for the email login first.
+  const loginButton = (
+    <a className="btn btn-pink lp-btn" href="/app">
+      📧 {t("login")}
+    </a>
+  );
 
   return (
     <div className="lp">
@@ -108,19 +129,38 @@ export default function Landing() {
         <div className="lp-hero-text">
           <h1>{t("heroTitle")}</h1>
           <p>{t("heroText")}</p>
-          <div className="lp-cta">
-            <a className="btn btn-pink lp-btn" href="/app">
-              🚀 {t(returning ? "continue" : "start")}
-            </a>
-            <a className="btn btn-light lp-btn" href="/app?login=1">
-              📧 {t("login")}
-            </a>
-          </div>
+          <div className="lp-cta">{loginButton}</div>
+          <p className="lp-note">🔒 {t("loginNote")}</p>
         </div>
         <div className="lp-hero-hero">
           <div className="bubble lp-hero-bubble">{t("bubble")}</div>
           <Mirodil size={200} mood="cheer" />
         </div>
+      </section>
+
+      <section className="lp-section">
+        <h2>{t("compareTitle")}</h2>
+        <div className="lp-compare" role="table" aria-label={t("compareTitle")}>
+          <div className="lp-compare-head" role="row">
+            <span role="columnheader">🤖 {t("compareUsual")}</span>
+            <span role="columnheader">
+              <Mirodil size={28} /> {t("compareOurs")}
+            </span>
+          </div>
+          {compare.map(([bad, good]) => (
+            <div key={bad} className="lp-compare-row" role="row">
+              <span role="cell" className="lp-bad">
+                ✖ {t(bad)}
+              </span>
+              <span role="cell" className="lp-good">
+                ✔ {t(good)}
+              </span>
+            </div>
+          ))}
+        </div>
+        <p className="lp-note" style={{ textAlign: "center" }}>
+          {t("compareNote")}
+        </p>
       </section>
 
       <section className="lp-section">
@@ -179,15 +219,15 @@ export default function Landing() {
         </div>
       </section>
 
-      <section className="lp-section lp-parents">
-        <Rosette size={72} colors={["#1e6bd6", "#f6b71a", "#d81b6a"]} />
-        <div className="stack" style={{ gap: 10 }}>
-          <h2>👨‍👩‍👧 {t("parentsTitle")}</h2>
-          <ul>
-            <li>{t("p1")}</li>
-            <li>{t("p2")}</li>
-            <li>{t("p3")}</li>
-          </ul>
+      <section className="lp-section">
+        <h2>{t("faqTitle")}</h2>
+        <div className="lp-faq">
+          {faq.map(([q, ans]) => (
+            <details key={q}>
+              <summary>{t(q)}</summary>
+              <p>{t(ans)}</p>
+            </details>
+          ))}
         </div>
       </section>
 
@@ -195,7 +235,7 @@ export default function Landing() {
         <h2>{t("finalTitle")}</h2>
         <p>{t("finalText")}</p>
         <a className="btn btn-primary lp-btn" href="/app">
-          📷 {t(returning ? "continue" : "start")}
+          📧 {t("login")}
         </a>
       </section>
 

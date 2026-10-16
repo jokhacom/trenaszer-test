@@ -37,6 +37,18 @@ export async function userFromToken(token: string): Promise<{ id: string; email:
   return user.id ? { id: user.id, email: user.email ?? "" } : null;
 }
 
+/**
+ * When email login is set up, the AI is only for logged-in families: nobody
+ * else can spend the site's AI tokens. Returns a 401 reply, or null to go on.
+ * Without login set up (no Supabase) the site stays open as before.
+ */
+export async function requireLogin(req: Request, hasDatabase: boolean): Promise<Response | null> {
+  if (!authEnabled() || !hasDatabase) return null;
+  const token = req.headers.get("authorization")?.replace(/^Bearer\s+/i, "");
+  const user = token ? await userFromToken(token).catch(() => null) : null;
+  return user ? null : Response.json({ error: "logged_out" }, { status: 401 });
+}
+
 /** A fresh login token (they last an hour) from the long-lived refresh token. */
 export async function refresh(refreshToken: string) {
   const res = await fetch(`${base()}/auth/v1/token?grant_type=refresh_token`, {

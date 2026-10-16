@@ -1,55 +1,89 @@
-// Texts of the landing page (www.mirodil.site) in Uzbek, Russian and English.
-// Uzbek: Latin script, o‘ and g‘ with ‘ (U+2018), tutuq belgisi ʼ (U+02BC).
+// Texts of the landing page (www.mirodil.site), written for parents, in
+// Uzbek, Russian and English. Uzbek: Latin script, o‘ and g‘ with ‘ (U+2018).
+// Comparisons with other services stay fair: no brand names, "usually", and
+// the note that some AI services have a study mode.
 
 import type { Lang } from "./types";
 
 type T = Record<Lang, string>;
 
 export const L = {
-  start: { uz: "Bepul boshlash", ru: "Начать бесплатно", en: "Start for free" },
-  continue: { uz: "Mashg‘ulotni davom ettirish", ru: "Продолжить заниматься", en: "Continue learning" },
   login: { uz: "Pochta orqali kirish", ru: "Войти по почте", en: "Log in with email" },
+  loginNote: {
+    uz: "Parol kerak emas — pochtangizga havola keladi.",
+    ru: "Пароль не нужен — на почту придёт ссылка.",
+    en: "No password — a link comes to your email.",
+  },
   heroTitle: {
-    uz: "Bola uchun yechmaydi — o‘zi yechishga o‘rgatadi",
-    ru: "Не решает за ребёнка — учит решать самому",
-    en: "It does not solve for your child — it teaches them to solve",
+    uz: "Farzandingiz javobni ko‘chirmaydi — tushunib yechadi",
+    ru: "Ваш ребёнок не списывает ответ — а понимает и решает сам",
+    en: "Your child doesn't copy the answer — they understand and solve it",
   },
   heroText: {
-    uz: "Masalani suratga oling: Mirodil uni Singapurcha — rasm, misol va savollar bilan tushuntiradi. 1–4-sinflar uchun, o‘zbek, rus va ingliz tillarida.",
-    ru: "Сфотографируйте задачу — Миродил объяснит её как в Сингапуре: картинками, похожим примером и вопросами. Для 1–4 классов, на узбекском, русском и английском.",
-    en: "Take a photo of the task — Mirodil explains it the Singapore way: with pictures, a similar example and questions. For grades 1–4, in Uzbek, Russian and English.",
+    uz: "Oddiy chat-botlar va tayyor javoblar saytlari odatda darhol yechimni beradi. Mirodil esa bolani qadamma-qadam olib boradi: rasm → o‘xshash misol → savol. 1–4-sinflar uchun, Singapur metodikasi asosida.",
+    ru: "Обычные чат-боты и сайты с готовыми ответами обычно сразу дают решение. Миродил ведёт ребёнка шаг за шагом: картинка → похожий пример → вопрос. Для 1–4 классов, по методике Сингапура.",
+    en: "Usual chatbots and answer sites usually give the solution right away. Mirodil leads the child step by step: a picture → a similar example → a question. For grades 1–4, based on the Singapore approach.",
   },
   bubble: {
-    uz: "Javobni aytmayman — o‘zing topishingga yordam beraman!",
-    ru: "Я не говорю ответ — я помогаю найти его самому!",
-    en: "I don't tell the answer — I help you find it!",
+    uz: "Birga o‘ylaymiz — javobni o‘zing topasan!",
+    ru: "Подумаем вместе — ответ найдёшь сам!",
+    en: "Let's think together — you'll find the answer!",
   },
+
+  compareTitle: { uz: "Oddiy AI va Mirodil", ru: "Обычный ИИ и Миродил", en: "A usual AI and Mirodil" },
+  compareUsual: { uz: "Oddiy AI va tayyor javoblar", ru: "Обычный ИИ и готовые ответы", en: "A usual AI and answer sites" },
+  compareOurs: { uz: "Mirodil", ru: "Миродил", en: "Mirodil" },
+  c1a: { uz: "Darhol tayyor javob beradi", ru: "Сразу даёт готовый ответ", en: "Gives the ready answer at once" },
+  c1b: { uz: "Javobni bermaydi — bola o‘zi topadi", ru: "Не даёт ответ — ребёнок находит его сам", en: "Gives no answer — the child finds it" },
+  c2a: { uz: "Bola ko‘chiradi, lekin tushunmaydi", ru: "Ребёнок списывает, но не понимает", en: "The child copies but does not understand" },
+  c2b: {
+    uz: "Bola usulni tushunadi va keyingi safar o‘zi yechadi",
+    ru: "Ребёнок понимает способ и в следующий раз решает сам",
+    en: "The child understands the method and solves alone next time",
+  },
+  c3a: { uz: "Kattalar uchun yozilgan murakkab matn", ru: "Сложный текст для взрослых", en: "Complex text written for adults" },
+  c3b: {
+    uz: "7–10 yoshli bola uchun sodda so‘zlar, rasmlar va ovoz",
+    ru: "Простые слова, картинки и голос для детей 7–10 лет",
+    en: "Simple words, pictures and voice for children aged 7–10",
+  },
+  c4a: {
+    uz: "Bola nimani tushunmaganini ota-ona bilmaydi",
+    ru: "Родитель не знает, что ребёнок не понял",
+    en: "The parent doesn't know what the child did not understand",
+  },
+  c4b: { uz: "Ota-onaga hisobot: nima yaxshi, nima qiyin", ru: "Отчёт родителю: что получается, что трудно", en: "A report for the parent: what goes well, what is hard" },
+  c5a: { uz: "Maktab dasturiga bog‘lanmagan", ru: "Не связан со школьной программой", en: "Not tied to the school curriculum" },
+  c5b: { uz: "1–4-sinf mavzulari va sizning darsliklaringiz", ru: "Темы 1–4 классов и ваши учебники", en: "Grade 1–4 topics and your own textbooks" },
+  c6a: { uz: "Faqat matn — tez zeriktiradi", ru: "Только текст — быстро надоедает", en: "Text only — gets boring fast" },
+  c6b: { uz: "O‘yinlar, konfetlar, stikerlar va darajalar", ru: "Игры, конфеты, стикеры и уровни", en: "Games, candies, stickers and levels" },
+  compareNote: {
+    uz: "Ba’zi AI xizmatlarida o‘quv rejimi bor, lekin uni odatda bir bosishda o‘chirib qo‘yish mumkin. Mirodilda tayyor javob umuman yo‘q.",
+    ru: "У некоторых ИИ-сервисов есть учебный режим, но его обычно можно выключить одним нажатием. В Миродиле готового ответа нет совсем.",
+    en: "Some AI services have a study mode, but it can usually be switched off with one tap. Mirodil has no ready answers at all.",
+  },
+
   stepsTitle: { uz: "Qanday ishlaydi", ru: "Как это работает", en: "How it works" },
-  step1: { uz: "Suratga ol", ru: "Сфотографируй", en: "Take a photo" },
+  step1: { uz: "Pochta orqali kiring", ru: "Войдите по почте", en: "Log in with email" },
   step1Text: {
+    uz: "Bir daqiqa: pochtangizni yozing va xatdagi havolani bosing.",
+    ru: "Одна минута: введите почту и нажмите на ссылку в письме.",
+    en: "One minute: type your email and tap the link in the letter.",
+  },
+  step2: { uz: "Farzandingiz suratga oladi", ru: "Ребёнок фотографирует задачу", en: "Your child takes a photo" },
+  step2Text: {
     uz: "Uy vazifasi, darslikdagi mashq yoki bitta masala.",
     ru: "Домашнее задание, упражнение из учебника или одну задачу.",
     en: "Homework, a textbook exercise or just one task.",
   },
-  step2: { uz: "Qadamma-qadam", ru: "Шаг за шагом", en: "Step by step" },
-  step2Text: {
-    uz: "Avval o‘zi urinadi. Qiyin bo‘lsa — rasm, o‘xshash misol, yo‘naltiruvchi savol.",
-    ru: "Сначала ребёнок пробует сам. Если трудно — картинка, похожий пример, наводящий вопрос.",
-    en: "First the child tries alone. If it is hard — a picture, a similar example, a leading question.",
-  },
-  step3: { uz: "O‘zi yechdi!", ru: "Решил сам!", en: "Solved it alone!" },
+  step3: { uz: "Mirodil o‘rgatadi", ru: "Миродил учит, вы видите отчёт", en: "Mirodil teaches, you see the report" },
   step3Text: {
-    uz: "Javobni bola o‘zi topadi va konfet, stiker, daraja oladi.",
-    ru: "Ответ ребёнок находит сам — и получает конфеты, стикеры и новые уровни.",
-    en: "The child finds the answer and gets candies, stickers and new levels.",
+    uz: "Bola o‘zi yechadi, siz esa hisobotda nima yaxshi va nima qiyinligini ko‘rasiz.",
+    ru: "Ребёнок решает сам, а вы в отчёте видите, что получается и что трудно.",
+    en: "The child solves it alone, and the report shows you what goes well and what is hard.",
   },
+
   featuresTitle: { uz: "Mirodilda nima bor", ru: "Что есть в Миродиле", en: "What Mirodil has" },
-  f1: { uz: "Tayyor javob yo‘q", ru: "Без готовых ответов", en: "No ready answers" },
-  f1t: {
-    uz: "Sun’iy intellekt uy vazifasini bola o‘rniga bajarmaydi. Sayt har bir maslahatni tekshiradi.",
-    ru: "ИИ не делает домашку вместо ребёнка. Сайт проверяет каждую подсказку, чтобы в ней не было ответа.",
-    en: "The AI never does the homework for the child. The site checks every hint for the answer.",
-  },
   f2: { uz: "Singapur metodikasi", ru: "Методика Сингапура", en: "The Singapore approach" },
   f2t: {
     uz: "Avval narsa va rasm, keyin sonlar. Kesmalar modeli, son uychalari, bir nechta yechim yo‘li.",
@@ -92,6 +126,13 @@ export const L = {
     ru: "Без графиков, простыми словами: что получается, что трудно и что потренировать.",
     en: "No charts, plain words: what goes well, what is hard and what to practise.",
   },
+  f9: { uz: "Hamma narsa saqlanadi", ru: "Всё сохраняется", en: "Everything is saved" },
+  f9t: {
+    uz: "Masalalar, konfetlar va natijalar bulutda. Istalgan telefonda oching — qayta ochish bepul.",
+    ru: "Задачи, конфеты и прогресс — в облаке. Открывайте на любом телефоне, повторно — бесплатно.",
+    en: "Tasks, candies and progress are in the cloud. Open them on any phone, again for free.",
+  },
+
   demoTitle: { uz: "Bu qanday ko‘rinadi", ru: "Как это выглядит", en: "What it looks like" },
   demoTask: { uz: "Azizda 8 ta olma, Malikada 5 ta. Hammasi nechta?", ru: "У Азиза 8 яблок, у Малики 5. Сколько всего?", en: "Aziz has 8 apples, Malika has 5. How many in all?" },
   demoHint: {
@@ -105,27 +146,52 @@ export const L = {
     ru: "Верно! Из 5 мы взяли 2 — сколько ещё осталось?",
     en: "Right! We took 2 from the 5 — how many are left?",
   },
-  parentsTitle: { uz: "Ota-onalar uchun", ru: "Для родителей", en: "For parents" },
-  p1: {
-    uz: "Bola uy vazifasini o‘zi bajaradi — siz yonida o‘tirmasangiz ham.",
-    ru: "Ребёнок делает домашку сам — даже когда вас нет рядом.",
-    en: "Your child does the homework alone — even when you are not around.",
+
+  faqTitle: { uz: "Ko‘p beriladigan savollar", ru: "Частые вопросы", en: "Questions parents ask" },
+  q1: { uz: "Bu bepulmi?", ru: "Это бесплатно?", en: "Is it free?" },
+  a1: { uz: "Ha, hozircha Mirodil bepul.", ru: "Да, сейчас Миродил бесплатный.", en: "Yes, Mirodil is free for now." },
+  q2: { uz: "Mirodil javobni umuman aytmaydimi?", ru: "Миродил совсем не говорит ответ?", en: "Does Mirodil never give the answer?" },
+  a2: {
+    uz: "Aytmaydi. Bola qiynalsa — rasm, o‘xshash misol va savollar bilan yordam beradi, oxirida birga qadamma-qadam yechadi. Lekin oxirgi javobni bola o‘zi yozadi.",
+    ru: "Не говорит. Если трудно — помогает картинкой, похожим примером и вопросами, в конце решает вместе по шагам. Но последний ответ ребёнок пишет сам.",
+    en: "No. If it is hard, Mirodil helps with a picture, a similar example and questions, and at the end solves it together step by step. But the child writes the final answer.",
   },
-  p2: {
-    uz: "Pochta orqali kirsangiz, natijalar har qanday telefonda saqlanadi. Parol kerak emas.",
-    ru: "Войдите по почте — прогресс сохранится на любом телефоне. Пароль не нужен.",
-    en: "Log in with email — progress is kept on any phone. No password needed.",
+  q3: { uz: "Qaysi sinflar va fanlar uchun?", ru: "Для каких классов и предметов?", en: "Which grades and subjects?" },
+  a3: {
+    uz: "1–4-sinflar: matematika, ona tili va rus tili, o‘qish, ingliz tili, atrofimizdagi olam. Eng chuqur ishlangani — matematika.",
+    ru: "1–4 классы: математика, родной и русский язык, чтение, английский, окружающий мир. Глубже всего проработана математика.",
+    en: "Grades 1–4: maths, mother tongue and Russian, reading, English, the world around us. Maths is the most developed.",
   },
-  p3: {
-    uz: "Reklama yo‘q. Ma’lumotlarni faqat siz ko‘rasiz.",
-    ru: "Без рекламы. Данные видите только вы.",
-    en: "No ads. Only you can see the data.",
+  q4: { uz: "Qaysi tillarda ishlaydi?", ru: "На каких языках?", en: "Which languages?" },
+  a4: {
+    uz: "O‘zbek, rus va ingliz tillarida. Mirodil matnni ovoz chiqarib ham o‘qiydi.",
+    ru: "На узбекском, русском и английском. Миродил ещё и читает вслух.",
+    en: "Uzbek, Russian and English. Mirodil also reads aloud.",
   },
+  q5: { uz: "Ma’lumotlar xavfsizmi?", ru: "Это безопасно?", en: "Is it safe?" },
+  a5: {
+    uz: "Siz faqat pochta bilan kirasiz, natijalarni faqat siz ko‘rasiz, reklama yo‘q. Suratlar saytda saqlanmaydi: ular faqat o‘qish uchun AI xizmatiga (Google Gemini) yuboriladi. Bolaning ismi yoki yuzi tushgan rasmni yubormang — faqat vazifani.",
+    ru: "Вы входите только по почте, данные видите только вы, рекламы нет. Фото на сайте не хранятся: они только отправляются для чтения в ИИ-сервис (Google Gemini). Не фотографируйте лицо или имя ребёнка — только задание.",
+    en: "You log in with email only, only you see the data, there are no ads. Photos are not kept on the site: they are only sent to an AI service (Google Gemini) to be read. Do not photograph your child's face or name — only the task.",
+  },
+  q6: { uz: "Telefondan ishlaydimi?", ru: "Работает на телефоне?", en: "Does it work on a phone?" },
+  a6: {
+    uz: "Ha: telefon, planshet va kompyuterda. Ilova o‘rnatish shart emas.",
+    ru: "Да: на телефоне, планшете и компьютере. Ничего устанавливать не нужно.",
+    en: "Yes: on a phone, tablet and computer. Nothing to install.",
+  },
+  q7: { uz: "Nega pochta orqali kirish kerak?", ru: "Зачем входить по почте?", en: "Why log in with email?" },
+  a7: {
+    uz: "Masalalar, konfetlar va natijalar bulutda saqlanadi va istalgan qurilmada ochiladi. Kirish uchun parol kerak emas.",
+    ru: "Задачи, конфеты и прогресс хранятся в облаке и открываются на любом устройстве. Пароль не нужен.",
+    en: "Tasks, candies and progress are kept in the cloud and open on any device. No password needed.",
+  },
+
   finalTitle: { uz: "Bugunoq sinab ko‘ring", ru: "Попробуйте сегодня", en: "Try it today" },
   finalText: {
-    uz: "Bitta masalani suratga oling va Mirodil qanday o‘rgatishini ko‘ring.",
-    ru: "Сфотографируйте одну задачу и посмотрите, как учит Миродил.",
-    en: "Take a photo of one task and see how Mirodil teaches.",
+    uz: "Kiring, bitta masalani suratga oling va Mirodil qanday o‘rgatishini ko‘ring.",
+    ru: "Войдите, сфотографируйте одну задачу и посмотрите, как учит Миродил.",
+    en: "Log in, take a photo of one task and see how Mirodil teaches.",
   },
   footer: { uz: "Mirodil — o‘zing yech!", ru: "Миродил — реши сам!", en: "Mirodil — solve it yourself!" },
 } satisfies Record<string, T>;

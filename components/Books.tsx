@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, type ReactNode } from "react";
+import { authHeader } from "@/lib/cloud";
 import { tr, type Key } from "@/lib/i18n";
 import type { Grade, Lang, Subject } from "@/lib/types";
 
@@ -46,7 +47,7 @@ function remember(id: string | null) {
 
 async function postJson(url: string, body: unknown): Promise<{ ok: boolean; status: number; data: Record<string, unknown> }> {
   try {
-    const res = await fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+    const res = await fetch(url, { method: "POST", headers: { "Content-Type": "application/json", ...(await authHeader()) }, body: JSON.stringify(body) });
     const data = (await res.json().catch(() => ({ error: "ai_error", code: `http-${res.status}` }))) as Record<string, unknown>;
     return { ok: res.ok, status: res.status, data };
   } catch {
@@ -93,7 +94,7 @@ export default function Books({ lang, grade, onFound }: { lang: Lang; grade: Gra
 
   async function load(select?: string) {
     try {
-      const res = await fetch(`/api/books?grade=${grade}`);
+      const res = await fetch(`/api/books?grade=${grade}`, { headers: await authHeader() });
       const data = (await res.json()) as { enabled?: boolean; books?: Book[] };
       setEnabled(Boolean(data.enabled));
       const list = data.books ?? [];
