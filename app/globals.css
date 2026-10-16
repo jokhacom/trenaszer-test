@@ -1708,10 +1708,3 @@ div.level-card {
 .lp-section > h2 {
   color: var(--blue);
 }
-
-.lp-hero-bubble .sticker-pop {
-  display: block;
-  font-size: 40px;
-  line-height: 1.2;
-  margin-top: 4px;
-}
