@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Nunito } from "next/font/google";
 import "./globals.css";
+import VoiceMode from "@/components/VoiceMode";
 
 const nunito = Nunito({
   subsets: ["latin", "latin-ext", "cyrillic"],
@@ -22,7 +23,10 @@ export const viewport: Viewport = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="uz" className={nunito.variable}>
-      <body>{children}</body>
+      <body>
+        {children}
+        <VoiceMode />
+      </body>
     </html>
   );
 }
