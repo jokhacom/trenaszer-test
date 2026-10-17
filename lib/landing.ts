@@ -10,9 +10,9 @@ type T = Record<Lang, string>;
 export const L = {
   login: { uz: "Pochta orqali kirish", ru: "Войти по почте", en: "Log in with email" },
   loginNote: {
-    uz: "Parol kerak emas — pochtangizga havola keladi.",
-    ru: "Пароль не нужен — на почту придёт ссылка.",
-    en: "No password — a link comes to your email.",
+    uz: "Pochta va parol bilan — yoki parolsiz, pochtaga keladigan havola orqali.",
+    ru: "По почте и паролю — или без пароля, по ссылке из письма.",
+    en: "With email and password — or without one, by a link in your email.",
   },
   loginShort: { uz: "Kirish", ru: "Войти", en: "Log in" },
   heroBadge: {
@@ -75,9 +75,9 @@ export const L = {
   stepsTitle: { uz: "Qanday ishlaydi", ru: "Как это работает", en: "How it works" },
   step1: { uz: "Pochta orqali kiring", ru: "Войдите по почте", en: "Log in with email" },
   step1Text: {
-    uz: "Bir daqiqa: pochtangizni yozing va xatdagi havolani bosing.",
-    ru: "Одна минута: введите почту и нажмите на ссылку в письме.",
-    en: "One minute: type your email and tap the link in the letter.",
+    uz: "Bir daqiqa: pochta va parolni yozing — yoki xatdagi havolani bosing.",
+    ru: "Одна минута: введите почту и пароль — или нажмите на ссылку в письме.",
+    en: "One minute: type your email and password — or tap the link in the letter.",
   },
   step2: { uz: "Farzandingiz suratga oladi", ru: "Ребёнок фотографирует задачу", en: "Your child takes a photo" },
   step2Text: {
@@ -191,9 +191,9 @@ export const L = {
   },
   q7: { uz: "Nega pochta orqali kirish kerak?", ru: "Зачем входить по почте?", en: "Why log in with email?" },
   a7: {
-    uz: "Masalalar, konfetlar va natijalar bulutda saqlanadi va istalgan qurilmada ochiladi. Kirish uchun parol kerak emas.",
-    ru: "Задачи, конфеты и прогресс хранятся в облаке и открываются на любом устройстве. Пароль не нужен.",
-    en: "Tasks, candies and progress are kept in the cloud and open on any device. No password needed.",
+    uz: "Masalalar, konfetlar va natijalar bulutda saqlanadi va istalgan qurilmada ochiladi. Pochta va parol bilan yoki parolsiz — pochtaga havola orqali kirasiz.",
+    ru: "Задачи, конфеты и прогресс хранятся в облаке и открываются на любом устройстве. Вход по почте и паролю или без пароля — по ссылке на почту.",
+    en: "Tasks, candies and progress are kept in the cloud and open on any device. Log in with email and password, or without a password by an email link.",
   },
 
   finalTitle: { uz: "Bugunoq sinab ko‘ring", ru: "Попробуйте сегодня", en: "Try it today" },

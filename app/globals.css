@@ -649,6 +649,40 @@ textarea.answer-input {
   animation: bob 2.4s ease-in-out infinite;
 }
 
+.mirodil {
+  position: relative;
+  display: inline-flex;
+  flex: none;
+  line-height: 0;
+}
+
+/* Beside a bubble Mirodil reads it aloud when tapped: a small speaker shows it. */
+.mirodil-talk {
+  cursor: pointer;
+  border-radius: 16px;
+}
+
+.mirodil-talk::after {
+  content: "🔊";
+  position: absolute;
+  right: -6px;
+  bottom: 2px;
+  width: 26px;
+  height: 26px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: #fff;
+  border: 2px solid var(--line);
+  font-size: 13px;
+  line-height: 1;
+}
+
+.mirodil-talk:focus-visible {
+  outline: 4px solid var(--blue);
+  outline-offset: 2px;
+}
+
 @keyframes bob {
   50% {
     transform: translateY(-4px);
@@ -1933,4 +1967,44 @@ div.level-card {
   .lp-msg {
     animation: none;
   }
+}
+
+/* Login: password field with a show button, and the "or" divider */
+.pw-field {
+  position: relative;
+}
+
+.pw-field .answer-input {
+  width: 100%;
+  padding-right: 56px;
+}
+
+.pw-eye {
+  position: absolute;
+  right: 6px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 44px;
+  height: 44px;
+  border: 0;
+  border-radius: 12px;
+  background: transparent;
+  font-size: 22px;
+  cursor: pointer;
+}
+
+.pw-or {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: var(--muted);
+  font-size: 15px;
+  font-weight: 800;
+}
+
+.pw-or::before,
+.pw-or::after {
+  content: "";
+  flex: 1;
+  border-top: 2px solid var(--line);
 }

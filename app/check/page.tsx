@@ -1,6 +1,7 @@
 import { aiEnabled, booksAiEnabled } from "@/lib/server/ai";
 import { db } from "@/lib/server/db";
 import { supabaseParts } from "@/lib/server/storage";
+import { ttsEnabled } from "@/lib/server/tts";
 
 // Read the settings on every visit, not at build time.
 export const dynamic = "force-dynamic";
@@ -22,6 +23,7 @@ export default function Check() {
     ],
     ["Серверный ключ Supabase (учебники)", sb.serverKey, "SUPABASE_SERVICE_ROLE_KEY или SUPABASE_SECRET_KEY"],
     ["Gemini для учебников", booksAiEnabled(), "GEMINI_API_KEY"],
+    ["Голос (озвучка, в том числе узбекская)", ttsEnabled(), "AZURE_SPEECH_KEY и AZURE_SPEECH_REGION"],
   ];
   const login = Boolean(db()) && sb.url && sb.publicKey;
   return (

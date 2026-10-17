@@ -35,6 +35,8 @@ export default function App() {
   const [practice, setPractice] = useState<Lesson | null>(null);
   const [cloud, setCloud] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
+  // Logged in by a "forgot password" letter: ask for the new password.
+  const [newPassword, setNewPassword] = useState(false);
   // The language of the login screen when there is no profile yet (a new phone or a new site address).
   const [loginLang, setLoginLang] = useState<Lang | undefined>(undefined);
   const [rewards, setRewards] = useState<Rewards>({ candies: 0 });
@@ -67,27 +69,11 @@ export default function App() {
     // join this phone's progress with the cloud copy.
     function checkLogin(first: boolean) {
       const login = takeLoginFromLink();
-      const lang = loadProfile()?.lang ?? "ru";
       if (login === "error") {
-        setNotice(tr(lang, "cloudBadLink"));
+        setNotice(tr(loadProfile()?.lang ?? "ru", "cloudBadLink"));
         if (loadProfile()) setScreen("parents");
-      } else if (login === "ok" || (first && loadSession())) {
-        syncNow().then((r) => {
-          const synced = loadProfile();
-          if (synced) setProfile(synced);
-          setRewards(loadRewards());
-          if (login === "ok" && r) {
-            // Straight to the child's home (or the first screen for a new family), with a clear "you are in".
-            const email = loadSession()?.email;
-            setNotice(`✅ ${tr(synced?.lang ?? lang, "cloudWelcome")}${email ? ` · ${email}` : ""}`);
-            setScreen(synced ? "home" : "welcome");
-          } else if (login === "ok") {
-            // The link worked but the cloud did not answer: say so instead of staying silent.
-            setNotice(`${tr(lang, "cloudSyncFailed")} (${tr(lang, "errorCode")}: sync)`);
-            if (loadProfile()) setScreen("parents");
-          }
-        });
-      }
+      } else if (login) afterLogin(login);
+      else if (first && loadSession()) afterLogin(null);
     }
     checkLogin(true);
     // The link may open in a tab where the site is already open.
@@ -103,6 +89,35 @@ export default function App() {
   useEffect(() => {
     if (profile) document.documentElement.lang = profile.lang;
   }, [profile]);
+
+  /**
+   * After a login (link, password, or a "forgot password" link), or on start
+   * when logged in before (`login` null): join this phone's progress with the
+   * cloud copy.
+   */
+  function afterLogin(login: "ok" | "recovery" | null) {
+    const lang = loadProfile()?.lang ?? "ru";
+    syncNow().then((r) => {
+      const synced = loadProfile();
+      if (synced) setProfile(synced);
+      setRewards(loadRewards());
+      if (login === "recovery") {
+        // Logged in by the reset letter: the parents' screen asks for the new password.
+        setNewPassword(true);
+        setNotice(tr(synced?.lang ?? lang, "pwChooseNew"));
+        setScreen(synced ? "parents" : "welcome");
+      } else if (login === "ok" && r) {
+        // Straight to the child's home (or the first screen for a new family), with a clear "you are in".
+        const email = loadSession()?.email;
+        setNotice(`✅ ${tr(synced?.lang ?? lang, "cloudWelcome")}${email ? ` · ${email}` : ""}`);
+        setScreen(synced ? "home" : "welcome");
+      } else if (login === "ok") {
+        // The login worked but the cloud did not answer: say so instead of staying silent.
+        setNotice(`${tr(lang, "cloudSyncFailed")} (${tr(lang, "errorCode")}: sync)`);
+        if (loadProfile()) setScreen("parents");
+      }
+    });
+  }
 
   // The "you are in" note is for the first screen after login only.
   useEffect(() => {
@@ -167,7 +182,7 @@ export default function App() {
                 <b>{tr(loginLang ?? profile?.lang ?? "uz", "loginFirstTitle")}</b>
               </div>
             </div>
-            <CloudCard lang={loginLang ?? profile?.lang ?? "uz"} notice={notice} onSynced={() => undefined} />
+            <CloudCard lang={loginLang ?? profile?.lang ?? "uz"} notice={notice} onSynced={() => undefined} onLoggedIn={() => afterLogin("ok")} />
           </div>
         )}
 
@@ -217,6 +232,8 @@ export default function App() {
             grade={profile.grade}
             cloud={cloud}
             notice={notice}
+            askPassword={newPassword}
+            onLoggedIn={() => afterLogin("ok")}
             onHome={home}
             onPractice={(lesson) => {
               setPractice(lesson);
