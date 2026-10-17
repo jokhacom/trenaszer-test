@@ -39,6 +39,14 @@ export function canSpeak(lang: Lang): boolean {
   return serverVoice || voiceFor(lang) !== null;
 }
 
+/** Text as a person reads it: pictures and marks (✓ → 📧 🇺🇿) dropped, math signs (+ − × =) kept. */
+export function forReading(text: string): string {
+  return text
+    .replace(/[\p{Extended_Pictographic}\p{So}\u{2190}-\u{21FF}\u{1F1E6}-\u{1F1FF}\u{FE0F}\u{20E3}\u{200D}]/gu, "")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
 /** Turns "35 + 27 = ?" into words so the voice reads it like a teacher. */
 export function forSpeech(text: string, lang: Lang): string {
   let s = text.replace(/…/g, ", ").replace(/[«»"“”]/g, "");
@@ -52,7 +60,11 @@ export function forSpeech(text: string, lang: Lang): string {
 let audio: HTMLAudioElement | null = null;
 const clips = new Map<string, string>();
 
+// Only the latest request plays: with the mouse moving fast, an older clip may arrive later.
+let latest = 0;
+
 async function speakOnServer(text: string, lang: Lang) {
+  const ticket = ++latest;
   const id = `${lang}|${text}`;
   let url = clips.get(id);
   if (!url) {
@@ -65,7 +77,9 @@ async function speakOnServer(text: string, lang: Lang) {
     url = URL.createObjectURL(await res.blob());
     clips.set(id, url);
   }
+  if (ticket !== latest) return;
   stopSpeaking();
+  latest = ticket;
   audio = new Audio(url);
   // Autoplay may be blocked until the first tap: then the 🔊 button works.
   audio.play().catch(() => undefined);
@@ -74,9 +88,11 @@ async function speakOnServer(text: string, lang: Lang) {
 export function speak(text: string, lang: Lang): boolean {
   const voice = voiceFor(lang);
   if (!voice) {
-    if (!serverVoice) return false;
-    void speakOnServer(forSpeech(text, lang).slice(0, 1200), lang);
-    return true;
+    // The first time, ask whether the site's voice service is there.
+    void askServer().then(() => {
+      if (serverVoice) void speakOnServer(forSpeech(text, lang).slice(0, 1200), lang);
+    });
+    return serverVoice;
   }
   stopSpeaking();
   const u = new SpeechSynthesisUtterance(forSpeech(text, lang));
@@ -88,6 +104,7 @@ export function speak(text: string, lang: Lang): boolean {
 }
 
 export function stopSpeaking() {
+  latest++;
   if (audio) {
     audio.pause();
     audio = null;

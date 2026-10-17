@@ -6,7 +6,7 @@ import { LANGS, type Lang } from "@/lib/types";
 
 export const runtime = "nodejs";
 
-const GUEST_CHARS = 300;
+const GUEST_CHARS = 400;
 
 /** Reads a text aloud: MP3 audio. */
 export async function POST(req: Request) {
@@ -20,7 +20,7 @@ export async function POST(req: Request) {
   if (denied) {
     // Before login (the login screen itself) short texts are read too, so a
     // blind parent can log in; only a few, so nobody spends the voice quota.
-    if (text.length > GUEST_CHARS || !allow(ip, "tts-guest", 30)) return denied;
+    if (text.length > GUEST_CHARS || !allow(ip, "tts-guest", 120)) return denied;
   } else if (!allow(ip, "tts", 300)) return Response.json({ error: "limit" }, { status: 429 });
   try {
     const audio = await synthesize(text, lang);

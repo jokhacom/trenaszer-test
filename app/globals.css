@@ -58,7 +58,8 @@ button {
 .shell {
   max-width: 760px;
   margin: 0 auto;
-  padding: 16px 16px 48px;
+  /* Room at the bottom for the round voice-mode button. */
+  padding: 16px 16px 88px;
 }
 
 .topbar {
@@ -2007,4 +2008,51 @@ div.level-card {
   content: "";
   flex: 1;
   border-top: 2px solid var(--line);
+}
+
+/* Voice mode: one round button, always in the same corner */
+.vm-toggle {
+  position: fixed;
+  right: 16px;
+  bottom: 16px;
+  z-index: 50;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  border: 3px solid #fff;
+  background: var(--blue);
+  color: #fff;
+  font-size: 26px;
+  line-height: 1;
+  cursor: pointer;
+  box-shadow: 0 8px 20px rgba(35, 22, 79, 0.25);
+}
+
+.vm-toggle.on {
+  background: var(--magenta);
+  animation: vm-pulse 2s ease-in-out infinite;
+}
+
+.vm-toggle:focus-visible {
+  outline: 4px solid var(--yellow);
+  outline-offset: 2px;
+}
+
+/* What is being read now */
+.vm-reading {
+  outline: 3px solid var(--yellow);
+  outline-offset: 3px;
+  border-radius: 8px;
+}
+
+@keyframes vm-pulse {
+  50% {
+    box-shadow: 0 0 0 10px rgba(216, 27, 106, 0.18), 0 8px 20px rgba(35, 22, 79, 0.25);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .vm-toggle.on {
+    animation: none;
+  }
 }

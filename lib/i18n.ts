@@ -107,6 +107,13 @@ const S = {
   helpMe: { uz: "Yordam ber", ru: "Помоги", en: "Help me" },
   dontKnow: { uz: "Bilmayman", ru: "Не знаю", en: "I don't know" },
   listen: { uz: "Tinglash", ru: "Послушать", en: "Listen" },
+  voiceMode: { uz: "Ovozli rejim", ru: "Голосовой режим", en: "Voice mode" },
+  voiceModeOn: {
+    uz: "Ovozli rejim yoqildi. Sichqonchani matnga olib boring yoki barmoq bilan bosing — o‘qib beraman.",
+    ru: "Голосовой режим включён. Наведите мышку на текст или нажмите на него — я прочитаю.",
+    en: "Voice mode is on. Point the mouse at any text or tap it, and I will read it.",
+  },
+  voiceModeOff: { uz: "Ovozli rejim o‘chirildi.", ru: "Голосовой режим выключен.", en: "Voice mode is off." },
   noVoice: {
     uz: "Bu tilda ovoz hali yo‘q",
     ru: "Для этого языка голос пока недоступен",
