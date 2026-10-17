@@ -1,5 +1,6 @@
 // Parent login by email (Supabase Auth): a one-time link goes to the email;
-// the link brings the parent back to the site already logged in. The server
+// the link brings the parent back to the site already logged in. Or email and
+// password, for parents who prefer it (or when the letter is slow). The server
 // checks the login token on every save, so a family sees only its own data.
 
 import { anonKey, base } from "./storage";
@@ -59,4 +60,62 @@ export async function refresh(refreshToken: string) {
   if (!res.ok) throw new AuthError("refresh-failed", 401);
   const s = (await res.json()) as { access_token: string; refresh_token: string; expires_in: number };
   return { access_token: s.access_token, refresh_token: s.refresh_token, expires_at: Math.floor(Date.now() / 1000) + s.expires_in };
+}
+
+export interface NewSession {
+  access_token: string;
+  refresh_token: string;
+  expires_at: number;
+  email: string;
+}
+
+type AuthReply = { access_token?: string; refresh_token?: string; expires_in?: number; user?: { email?: string }; email?: string; error_code?: string; code?: string | number; msg?: string };
+
+function session(s: AuthReply, email: string): NewSession | null {
+  if (!s.access_token || !s.refresh_token) return null;
+  return { access_token: s.access_token, refresh_token: s.refresh_token, expires_at: Math.floor(Date.now() / 1000) + (s.expires_in ?? 3600), email: s.user?.email ?? email };
+}
+
+async function authFailure(res: Response, what: string): Promise<never> {
+  const body = (await res.json().catch(() => ({}))) as AuthReply;
+  const code = String(body.error_code ?? body.code ?? "");
+  console.error(`${what} failed`, res.status, code);
+  if (res.status === 429) throw new AuthError("email-limit", 429);
+  if (code === "invalid_credentials") throw new AuthError("wrong_password", 400);
+  if (code === "email_not_confirmed") throw new AuthError("not_confirmed", 400);
+  if (code === "weak_password") throw new AuthError("weak_password", 400);
+  if (code === "user_already_exists" || code === "email_exists") throw new AuthError("exists", 400);
+  throw new AuthError(code || `auth-${res.status}`, 502);
+}
+
+/** Logs in with email and password. */
+export async function loginWithPassword(email: string, password: string): Promise<NewSession> {
+  const res = await fetch(`${base()}/auth/v1/token?grant_type=password`, { method: "POST", headers: headers(), body: JSON.stringify({ email, password }) });
+  if (!res.ok) return authFailure(res, "password login");
+  const s = session((await res.json()) as AuthReply, email);
+  if (!s) throw new AuthError("auth-session", 502);
+  return s;
+}
+
+/**
+ * A new account with a password. When Supabase asks to confirm the email
+ * (the default), there is no session yet: a letter goes out first.
+ */
+export async function signUp(email: string, password: string, back: string): Promise<NewSession | null> {
+  const res = await fetch(`${base()}/auth/v1/signup?redirect_to=${encodeURIComponent(back)}`, { method: "POST", headers: headers(), body: JSON.stringify({ email, password }) });
+  if (!res.ok) return authFailure(res, "sign up");
+  return session((await res.json()) as AuthReply, email);
+}
+
+/** Sends a letter whose link logs the parent in to choose a new password. */
+export async function sendPasswordReset(email: string, back: string): Promise<void> {
+  const res = await fetch(`${base()}/auth/v1/recover?redirect_to=${encodeURIComponent(back)}`, { method: "POST", headers: headers(), body: JSON.stringify({ email }) });
+  if (!res.ok) await authFailure(res, "password reset");
+}
+
+/** Sets or changes the password of the logged-in parent. */
+export async function setPassword(token: string, password: string): Promise<void> {
+  const res = await fetch(`${base()}/auth/v1/user`, { method: "PUT", headers: headers({ Authorization: `Bearer ${token}` }), body: JSON.stringify({ password }) });
+  if (res.status === 401 || res.status === 403) throw new AuthError("logged_out", 401);
+  if (!res.ok) await authFailure(res, "set password");
 }

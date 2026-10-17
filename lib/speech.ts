@@ -1,7 +1,8 @@
-// Reading tasks aloud with the browser's built-in voices.
-// Browsers rarely ship an Uzbek voice; until a voice service (e.g. Azure) is
-// connected, Uzbek is read only where the device has a uz-UZ voice.
+// Reading texts aloud: the device's own voice when it has one for the
+// language, otherwise the site's voice service (/api/tts). Browsers rarely
+// ship an Uzbek voice, so Uzbek goes to the service.
 
+import { authHeader } from "./cloud";
 import type { Lang } from "./types";
 
 const LOCALE: Record<Lang, string> = { uz: "uz", ru: "ru", en: "en" };
@@ -18,8 +19,24 @@ function voiceFor(lang: Lang): SpeechSynthesisVoice | null {
   return voices.find((v) => v.lang.toLowerCase().startsWith(LOCALE[lang])) ?? null;
 }
 
+// Whether the site's voice service is set up (asked once from /api/status).
+let serverVoice = false;
+let asked: Promise<void> | null = null;
+const listeners = new Set<() => void>();
+
+function askServer(): Promise<void> {
+  asked ??= fetch("/api/status")
+    .then((r) => r.json())
+    .then((d: { tts?: boolean }) => {
+      serverVoice = Boolean(d.tts);
+      listeners.forEach((cb) => cb());
+    })
+    .catch(() => undefined);
+  return asked;
+}
+
 export function canSpeak(lang: Lang): boolean {
-  return voiceFor(lang) !== null;
+  return serverVoice || voiceFor(lang) !== null;
 }
 
 /** Turns "35 + 27 = ?" into words so the voice reads it like a teacher. */
@@ -32,10 +49,36 @@ export function forSpeech(text: string, lang: Lang): string {
   return s.replace(/\s+/g, " ").trim();
 }
 
+let audio: HTMLAudioElement | null = null;
+const clips = new Map<string, string>();
+
+async function speakOnServer(text: string, lang: Lang) {
+  const id = `${lang}|${text}`;
+  let url = clips.get(id);
+  if (!url) {
+    const res = await fetch("/api/tts", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", ...(await authHeader()) },
+      body: JSON.stringify({ text, lang }),
+    }).catch(() => null);
+    if (!res?.ok) return;
+    url = URL.createObjectURL(await res.blob());
+    clips.set(id, url);
+  }
+  stopSpeaking();
+  audio = new Audio(url);
+  // Autoplay may be blocked until the first tap: then the 🔊 button works.
+  audio.play().catch(() => undefined);
+}
+
 export function speak(text: string, lang: Lang): boolean {
   const voice = voiceFor(lang);
-  if (!voice) return false;
-  window.speechSynthesis.cancel();
+  if (!voice) {
+    if (!serverVoice) return false;
+    void speakOnServer(forSpeech(text, lang).slice(0, 1200), lang);
+    return true;
+  }
+  stopSpeaking();
   const u = new SpeechSynthesisUtterance(forSpeech(text, lang));
   u.voice = voice;
   u.lang = voice.lang;
@@ -45,14 +88,29 @@ export function speak(text: string, lang: Lang): boolean {
 }
 
 export function stopSpeaking() {
+  if (audio) {
+    audio.pause();
+    audio = null;
+  }
   if (typeof window !== "undefined" && "speechSynthesis" in window) window.speechSynthesis.cancel();
 }
 
-/** Voices load asynchronously in some browsers. */
+/** Whether anything is being read aloud now. */
+export function isSpeaking(): boolean {
+  if (audio && !audio.paused && !audio.ended) return true;
+  return typeof window !== "undefined" && "speechSynthesis" in window && window.speechSynthesis.speaking;
+}
+
+/** Voices load asynchronously in some browsers; the voice service answer too. */
 export function onVoicesReady(cb: () => void): () => void {
-  if (typeof window === "undefined" || !("speechSynthesis" in window)) return () => {};
-  const synth = window.speechSynthesis;
-  synth.addEventListener("voiceschanged", cb);
+  if (typeof window === "undefined") return () => {};
+  listeners.add(cb);
+  void askServer();
+  const synth = "speechSynthesis" in window ? window.speechSynthesis : null;
+  synth?.addEventListener("voiceschanged", cb);
   cb();
-  return () => synth.removeEventListener("voiceschanged", cb);
+  return () => {
+    listeners.delete(cb);
+    synth?.removeEventListener("voiceschanged", cb);
+  };
 }

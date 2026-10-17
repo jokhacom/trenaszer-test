@@ -46,11 +46,16 @@ export default function ParentReport({
   onHome,
   cloud,
   notice,
+  askPassword,
+  onLoggedIn,
 }: {
   lang: Lang;
   grade: Grade;
   /** Parents can log in and keep progress in the cloud. */
   cloud: boolean;
+  /** Logged in by a "forgot password" letter: open the new-password form. */
+  askPassword?: boolean;
+  onLoggedIn?: () => void;
   /** A message after the login link brought the parent back. */
   notice?: string | null;
   onPractice: (l: Lesson) => void;
@@ -129,7 +134,7 @@ export default function ParentReport({
       )}
 
       {cloud ? (
-        <CloudCard lang={lang} notice={notice} onSynced={() => setR(build(grade))} />
+        <CloudCard lang={lang} notice={notice} askPassword={askPassword} onLoggedIn={onLoggedIn} onSynced={() => setR(build(grade))} />
       ) : (
         // Login is not set up on this site yet: tell the owner where to look instead of hiding it silently.
         <p className="muted" style={{ margin: 0, fontSize: 15 }}>

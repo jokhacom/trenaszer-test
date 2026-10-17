@@ -34,6 +34,8 @@ function set(key: string, value: unknown) {
 }
 
 export const loadSession = () => get<Session>(SESSION_KEY);
+/** Keeps a login made with email and password. */
+export const saveSession = (s: Session) => set(SESSION_KEY, s);
 export const logout = () => set(SESSION_KEY, null);
 
 export function snapshot(): Snapshot {
@@ -52,9 +54,10 @@ function restore(s: Snapshot) {
 /**
  * The login link brings the parent back with the login in the address
  * (#access_token=…). Saves it and cleans the address. Returns "error" when
- * the link was old or already used.
+ * the link was old or already used, "recovery" for a "forgot password" link
+ * (logged in, now to choose a new password).
  */
-export function takeLoginFromLink(): "ok" | "error" | null {
+export function takeLoginFromLink(): "ok" | "recovery" | "error" | null {
   const hash = new URLSearchParams(window.location.hash.slice(1));
   const clear = () => history.replaceState(null, "", window.location.pathname + window.location.search);
   if (hash.get("error") || hash.get("error_description")) {
@@ -66,8 +69,9 @@ export function takeLoginFromLink(): "ok" | "error" | null {
   if (!access || !refreshToken) return null;
   const expiresAt = Number(hash.get("expires_at")) || Math.floor(Date.now() / 1000) + (Number(hash.get("expires_in")) || 3600);
   set(SESSION_KEY, { access_token: access, refresh_token: refreshToken, expires_at: expiresAt });
+  const recovery = hash.get("type") === "recovery";
   clear();
-  return "ok";
+  return recovery ? "recovery" : "ok";
 }
 
 /** A valid login token, refreshed when it is about to run out; null when logged out. */
@@ -143,4 +147,20 @@ export function startAutoSave(): () => void {
     if (timer) clearTimeout(timer);
     timer = setTimeout(() => void call("PUT", { data: snapshot() }), 4000);
   });
+}
+
+export type PasswordMode = "login" | "signup" | "reset" | "set";
+
+/** Email-and-password requests; a login (or a sign-up without confirmation) is kept. */
+export async function passwordAuth(mode: PasswordMode, email: string, password = ""): Promise<{ ok: boolean; confirm?: boolean; error?: string; status: number }> {
+  const res = await fetch("/api/auth/password", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...(mode === "set" ? await authHeader() : {}) },
+    body: JSON.stringify({ mode, email, password }),
+  }).catch(() => null);
+  if (!res) return { ok: false, error: "network", status: 0 };
+  const data = (await res.json().catch(() => ({}))) as { session?: Session; confirm?: boolean; error?: string; code?: string };
+  if (!res.ok) return { ok: false, error: data.error ?? data.code ?? `http-${res.status}`, status: res.status };
+  if (data.session) set(SESSION_KEY, data.session);
+  return { ok: true, confirm: data.confirm, status: res.status };
 }
