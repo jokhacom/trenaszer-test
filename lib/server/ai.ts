@@ -9,7 +9,7 @@ import Anthropic from "@anthropic-ai/sdk";
 import { ApiError, GoogleGenAI, ThinkingLevel } from "@google/genai";
 import { evaluate } from "../expression";
 import { containsNumber } from "../problems";
-import { containsText } from "../answers";
+import { containsText, normalizeText } from "../answers";
 import { gapCount, shuffleFor } from "../drill";
 import type { AnswerKind, BarSpec, Drill, DrillItem, Frame, Grade, Lang, Lesson, Step, Subject, Visual } from "../types";
 
@@ -604,7 +604,9 @@ You receive an exercise with many gaps or choices of one kind (for example: choo
   - options: 2–4 FULL words, one per variant ("суботу", "субботу") — never single letters;
   - correct: the index of the right option (0-based); check it carefully;
   - hint: one short nudge for this word if the child chooses wrong (which rule, what to listen to or to check, a related word). Never the right word itself.
-Never write any right word in rule, example_frames or hints.
+Never give an answer away in rule, example_frames or hints:
+  - spelling gaps ("су(б, бб)оту"): never write a right word of the exercise;
+  - choosing between different words (prepositions, endings, conjunctions): the rule may explain what each choice means ("«после» — later than something"), but never put a choice into a sentence or phrase of the exercise ("гуляем по улицам"), and a hint never names its own right choice.
 Set supported to false when the exercise is not like this (it has no gaps or choices, or the answers are not words), and explain briefly in reason.
 
 Write every text in the output language given by the user, except the words of the exercise, which stay as printed.
@@ -664,9 +666,53 @@ export async function buildDrill(task: string, lang: Lang, grade: Grade, image?:
   return checkDrill(raw, lang);
 }
 
+/** Letters to change to turn one word into another (small words only). */
+function editDistance(a: string, b: string): number {
+  const row = Array.from({ length: b.length + 1 }, (_, j) => j);
+  for (let i = 1; i <= a.length; i++) {
+    let prev = row[0];
+    row[0] = i;
+    for (let j = 1; j <= b.length; j++) {
+      const keep = row[j];
+      row[j] = Math.min(row[j] + 1, row[j - 1] + 1, prev + (a[i - 1] === b[j - 1] ? 0 : 1));
+      prev = keep;
+    }
+  }
+  return row[b.length];
+}
+
+/** Spellings of one word ("субботу", "суботу"), not different words ("по", "после"). */
+function spellings(options: string[]): boolean {
+  const n = options.map(normalizeText);
+  // Spellings differ inside the word; "перед" and "через" differ at both ends.
+  const alike = (a: string, b: string) => editDistance(a, b) <= 2 && (a[0] === b[0] || a.at(-1) === b.at(-1));
+  return n.every((a) => a.length >= 3 && n.every((b) => alike(a, b)));
+}
+
+const GAP = /\.{2,}|…|_{2,}/;
+
+/** True when `phrase` (one or more words) stands in `text` as whole words. */
+const hasWords = (text: string, phrase: string) => ` ${normalizeText(text)} `.includes(` ${normalizeText(phrase)} `);
+
+/**
+ * What would give one item's answer away. For spellings of one word, the right
+ * word itself. For a choice between different words (prepositions: по, с,
+ * после…), a rule may well name them: only the filled-in gap gives the answer
+ * away, the right word with its neighbour in the sentence ("по улицам").
+ */
+function giveaways(right: string, options: string[], prompt: string, context?: string): string[] {
+  if (spellings(options)) return normalizeText(right).length >= 3 ? [right] : [];
+  const source = GAP.test(prompt) ? prompt : (context ?? "");
+  const gap = source.match(GAP);
+  if (!gap || gap.index === undefined) return [];
+  const before = normalizeText(source.slice(0, gap.index)).split(" ").at(-1);
+  const after = normalizeText(source.slice(gap.index + gap[0].length)).split(" ")[0];
+  return [before ? `${before} ${right}` : "", after ? `${right} ${after}` : ""].filter(Boolean);
+}
+
 /**
  * Checks the AI's mini-game: every item needs real options and a valid right
- * index, and no rule, slide or hint may contain a right word.
+ * index, and no rule, slide or hint may give a right answer away.
  */
 export function checkDrill(raw: RawDrill, lang: Lang): DrillResult {
   if (!raw.supported) return { ok: false, reason: raw.reason || "unsupported" };
@@ -689,10 +735,14 @@ export function checkDrill(raw: RawDrill, lang: Lang): DrillResult {
   if (items.length < 2) return { ok: false, reason: "few-items" };
   items.splice(25);
 
-  const rights = items.map((it) => it.options[it.answer]);
-  const leaks = (s: string) => rights.some((w) => containsText(s, w));
+  const away = items.map((it) => giveaways(it.options[it.answer], it.options, it.prompt, it.context));
+  const leaks = (s: string) => away.some((list) => list.some((w) => hasWords(s, w)));
   if (!raw.rule?.trim() || leaks(raw.rule)) return { ok: false, reason: "rule-leak" };
-  for (const it of items) if (it.hint && leaks(it.hint)) it.hint = undefined;
+  // A hint is for its own word: naming the right choice there ("here we need «по»") gives it away.
+  items.forEach((it) => {
+    const right = it.options[it.answer];
+    if (it.hint && (leaks(it.hint) || (normalizeText(right).length >= 2 && hasWords(it.hint, right)))) it.hint = undefined;
+  });
   const example: Frame[] = (raw.example_frames ?? [])
     .map((f) => f?.text?.trim())
     .filter((text): text is string => !!text && !leaks(text))

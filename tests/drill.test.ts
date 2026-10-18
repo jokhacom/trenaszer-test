@@ -66,3 +66,37 @@ describe("checkDrill", () => {
     expect(checkDrill(raw({ items: raw().items.slice(3) }), "ru")).toEqual({ ok: false, reason: "few-items" });
   });
 });
+
+describe("checkDrill with prepositions (choice between different words)", () => {
+  const prepositions = (over: Partial<RawDrill> = {}): RawDrill =>
+    raw({
+      task: "Вставьте подходящие по смыслу предлоги",
+      rule: "Предлоги показывают, где и когда: «по» — движение вдоль, «после» — позже чего-то, «через» — спустя время, «перед» — раньше чего-то.",
+      example_frames: [{ text: "Пример: мы пришли ... обеда. Обед уже был — значит, после." }, { text: "Подставь предлог и прочитай вслух." }],
+      items: [
+        { prompt: "... улицам", context: "Мы часто гуляем ... улицам старого города.", options: ["по", "через", "после"], correct: 0, hint: "Подумай: гуляем вдоль улиц." },
+        { prompt: "... окончания", context: "Час ... окончания занятий мы пошли в кино.", options: ["перед", "через", "после"], correct: 1, hint: "Здесь нужен предлог через." },
+        { prompt: "... отъездом", context: "Брат зайдёт к нам ... отъездом.", options: ["перед", "после"], correct: 0, hint: "Это раньше отъезда." },
+      ],
+      ...over,
+    });
+
+  it("accepts a rule that explains the prepositions themselves", () => {
+    const r = checkDrill(prepositions(), "ru");
+    if (!r.ok) throw new Error(r.reason);
+    expect(r.drill.items).toHaveLength(3);
+    expect(r.drill.example).toHaveLength(2);
+  });
+
+  it("drops a hint that names its own right preposition", () => {
+    const r = checkDrill(prepositions(), "ru");
+    if (!r.ok) throw new Error(r.reason);
+    const byPrompt = Object.fromEntries(r.drill.items.map((it) => [it.prompt, it.hint]));
+    expect(byPrompt["... окончания"]).toBeUndefined();
+    expect(byPrompt["... улицам"]).toBe("Подумай: гуляем вдоль улиц.");
+  });
+
+  it("still rejects a rule that fills in a gap", () => {
+    expect(checkDrill(prepositions({ rule: "Запомни: гуляем по улицам, брат зайдёт перед отъездом." }), "ru")).toEqual({ ok: false, reason: "rule-leak" });
+  });
+});
