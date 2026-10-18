@@ -54,14 +54,20 @@ export async function POST(req: Request) {
     const image = m && m[2].length <= 7_000_000 ? { data: m[2], mediaType: m[1] as NonNullable<Input["image"]>["mediaType"] } : undefined;
     if (drill) {
       const result = await buildDrill(text, lang, grade, image);
-      if (!result.ok) return Response.json({ error: "unsupported", reason: result.reason }, { status: 422 });
-      await putLesson(key, result.drill);
-      return Response.json({ drill: result.drill, key });
+      if (result.ok) {
+        await putLesson(key, result.drill);
+        return Response.json({ drill: result.drill, key });
+      }
+      // No mini-game for this exercise: the child still gets the step-by-step lesson.
+      console.warn("drill failed, step-by-step instead", result.reason);
     }
+    const lessonKey = `${LESSON_VERSION}|${fingerprint(text, lang, grade)}`;
+    const ready = drill ? await getLesson(lessonKey) : undefined;
+    if (ready && !("items" in ready)) return Response.json({ lesson: ready, key: lessonKey, cached: true });
     const result = await buildLesson(text, lang, grade, image);
     if (!result.ok) return Response.json({ error: "unsupported", reason: result.reason }, { status: 422 });
-    await putLesson(key, result.lesson);
-    return Response.json({ lesson: result.lesson, key });
+    await putLesson(lessonKey, result.lesson);
+    return Response.json({ lesson: result.lesson, key: lessonKey });
   } catch (e) {
     console.error("lesson failed", e);
     const error = e instanceof AiError ? e.message : "ai_error";

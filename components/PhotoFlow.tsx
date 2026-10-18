@@ -178,7 +178,9 @@ export default function PhotoFlow({
     if (r.ok) {
       // Saved in "My tasks": opening it again later costs no AI call.
       const title = (current !== null && tasks[current]?.title) || text.replace(/\s+/g, " ").slice(0, 70);
-      historyId.current = addToHistory({ title, text: text.slice(0, 2000), lang, grade, mode, key: r.data.key as string | undefined });
+      // A step-by-step lesson may come instead of a mini-game: "My tasks" reopens what came.
+      const came = r.data.drill ? mode : undefined;
+      historyId.current = addToHistory({ title, text: text.slice(0, 2000), lang, grade, mode: came, key: r.data.key as string | undefined });
       if (r.data.drill) return setStage({ s: "drill", drill: r.data.drill as DrillData });
       return setStage({ s: "lesson", lesson: r.data.lesson as Lesson });
     }
